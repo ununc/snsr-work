@@ -34,7 +34,7 @@ export const signup = async (info: SignUpForm) => {
   }
 };
 
-export const autoLogin = async () => {
+export const autoLogin = async (): Promise<boolean> => {
   const { data } = await apiClient.get("auth/validate");
   return data.isValid;
 };

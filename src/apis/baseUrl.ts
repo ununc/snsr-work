@@ -1,3 +1,4 @@
+import { useTokenStore } from "@/stores/token.store";
 import axios from "axios";
 
 export const baseUrl = "/api";
@@ -9,3 +10,21 @@ export const apiClient = axios.create({
   },
   withCredentials: true,
 });
+
+const getToken = () => {
+  return useTokenStore.getState().token;
+};
+
+// 요청 인터셉터 추가
+apiClient.interceptors.request.use(
+  (config) => {
+    const token = getToken();
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(new Error(error));
+  }
+);

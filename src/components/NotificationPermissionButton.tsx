@@ -1,12 +1,25 @@
 import { useState, useEffect } from "react";
 import { Bell, BellOff } from "lucide-react";
 import { useServiceWorkerStore } from "@/stores/serviceWorkerStore";
-// import { sendSubscription } from "@/apis/push/subscribe";
+import { sendSubscription } from "@/apis/push/subscribe";
+
+const urlBase64ToUint8Array = (base64String: string): Uint8Array => {
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+};
 
 export const NotificationPermissionButton = () => {
   const [permission, setPermission] = useState("default");
   const [loading, setLoading] = useState(false);
-  const { registration } = useServiceWorkerStore();
+  const { initGetRegister } = useServiceWorkerStore();
   useEffect(() => {
     // 현재 알림 권한 상태 확인
     setPermission(Notification.permission);
@@ -29,11 +42,14 @@ export const NotificationPermissionButton = () => {
         throw new Error("브라우저가 푸시 알림을 지원하지 않습니다");
       }
 
+      const registration = await initGetRegister();
       // 권한 요청
       const permission = await Notification.requestPermission();
+      if (!registration) return;
+
       setPermission(permission);
 
-      if (permission === "granted" && registration) {
+      if (permission === "granted") {
         // 서비스워커 등록 확인
 
         // VAPID 키는 환경변수나 설정에서 가져오기
@@ -42,11 +58,10 @@ export const NotificationPermissionButton = () => {
         // 푸시 구독
         const subscription = await registration.pushManager.subscribe({
           userVisibleOnly: true,
-          applicationServerKey: vapidPublicKey,
+          applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
         });
-        console.log(subscription);
         // 서버에 구독 정보 전송
-        // await sendSubscription(subscription);
+        await sendSubscription(subscription);
       }
     } catch (err: unknown) {
       if (err instanceof Error) {

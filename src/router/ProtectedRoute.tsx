@@ -3,22 +3,31 @@ import { Navigate, Outlet } from "react-router-dom";
 import { BottomNav } from "../components/BottomNav";
 import { autoLogin } from "@/apis/auth/login";
 import { useUserStore } from "@/stores/userInfo.store";
+import { useTokenStore } from "@/stores/token.store";
 
 export const ProtectedRoute = () => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
-  const { loadUser } = useUserStore();
+  const { loadUser, clearUser } = useUserStore();
+  const { token, loadToken, clearToken } = useTokenStore();
   useEffect(() => {
     const checkLogin = async () => {
       try {
-        const response = await autoLogin();
-        setIsAuthenticated(response);
-        loadUser();
+        if (!token) {
+          loadToken();
+          loadUser();
+          const response = await autoLogin();
+          setIsAuthenticated(response);
+        } else {
+          setIsAuthenticated(true);
+        }
       } catch {
+        clearToken();
+        clearUser();
         setIsAuthenticated(false);
       }
     };
     checkLogin();
-  }, [loadUser]);
+  }, []);
 
   if (isAuthenticated === null) return <div></div>;
 
