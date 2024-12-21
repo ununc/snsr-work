@@ -6,19 +6,8 @@ interface ServiceWorkerState {
   updateLater: () => void;
   checkForUpdates: () => Promise<void>;
   updateNow: () => Promise<void>;
+  initGetRegister: () => Promise<ServiceWorkerRegistration | undefined>;
 }
-
-const getInitialRegistration = async () => {
-  if ("serviceWorker" in navigator) {
-    try {
-      return await navigator.serviceWorker.getRegistration();
-    } catch (error) {
-      console.error("Failed to get service worker registration:", error);
-      return null;
-    }
-  }
-  return null;
-};
 
 export const useServiceWorkerStore = create<ServiceWorkerState>()(
   (set, get) => ({
@@ -58,10 +47,8 @@ export const useServiceWorkerStore = create<ServiceWorkerState>()(
           { once: true }
         );
       } else {
-        const register = await getInitialRegistration();
-        if (register) {
-          set({ registration: register });
-        }
+        const { initGetRegister } = get();
+        await initGetRegister();
       }
     },
     updateNow: async () => {
@@ -71,6 +58,18 @@ export const useServiceWorkerStore = create<ServiceWorkerState>()(
         registration.waiting.postMessage({ type: "SKIP_WAITING" });
         // 페이지 새로고침
         window.location.reload();
+      }
+    },
+    initGetRegister: async () => {
+      const { registration } = get();
+      if ("serviceWorker" in navigator && !registration) {
+        try {
+          const register = await navigator.serviceWorker.getRegistration();
+          set({ registration: register });
+          return register;
+        } catch {
+          set({ registration: null });
+        }
       }
     },
   })

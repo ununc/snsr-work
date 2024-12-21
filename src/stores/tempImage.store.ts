@@ -1,10 +1,10 @@
 import { create } from "zustand";
 
 interface ImageInfo {
-  objectName: string;
-  url: string;
-  file: File;
-  base64: string;
+  objectName: string; // content에 저장
+  url: string; // file을 올릴 주소
+  file: File; // 임시 url에 올라갈 파일
+  objectUrl: string; // objectName으로 변환을 위한 부분
 }
 
 interface ImageState {

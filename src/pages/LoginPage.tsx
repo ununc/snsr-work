@@ -1,30 +1,33 @@
 import { useState, ChangeEvent, FormEvent } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Credentials, login } from "../apis/auth/login";
-import { useUserStore } from "../stores/userInfo.store";
+import { useGlobalStore } from "@/stores/global.store";
 
 export const LoginPage = () => {
   const [credentials, setCredentials] = useState<Credentials>({
     id: "",
     password: "",
   });
+  const [autoLogin, setAutoLogin] = useState(false);
   const navigate = useNavigate();
-  const { setUser } = useUserStore();
+  const { setUserData } = useGlobalStore();
+
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
-    setCredentials({
-      ...credentials,
-      [e.target.name]: e.target.value,
-    });
+    const { name, value } = e.target;
+    setCredentials((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
   };
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     try {
-      const { userInfo, menuList } = await login(credentials);
-      userInfo.autoLogin = true;
+      const { userInfo, menuList, access_token } = await login(credentials);
       userInfo.menuList = menuList;
-      setUser(userInfo);
-      navigate("/calendar");
+
+      setUserData(userInfo, access_token, autoLogin);
+      navigate("/news");
     } catch {
       alert("로그인에 실패했습니다.");
     }
@@ -62,6 +65,23 @@ export const LoginPage = () => {
               onChange={handleChange}
               className="mt-1 block w-full rounded-md border border-gray-300 p-2"
             />
+          </div>
+
+          <div className="flex items-center">
+            <input
+              id="autoLogin"
+              name="autoLogin"
+              type="checkbox"
+              checked={autoLogin}
+              onChange={(e) => setAutoLogin(e.target.checked)}
+              className="h-4 w-4 text-blue-600 rounded border-gray-300"
+            />
+            <label
+              htmlFor="autoLogin"
+              className="ml-2 block text-sm text-gray-900"
+            >
+              자동 로그인
+            </label>
           </div>
         </div>
 

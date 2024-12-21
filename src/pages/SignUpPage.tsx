@@ -48,7 +48,7 @@ export const SignUpPage = () => {
       }
       await signup(payload);
       navigate("/account/login");
-      alert("회원가입 완료 로그인으로 이동합니다.");
+      alert("회원가입 완료\n로그인으로 이동합니다.");
     } catch {
       alert("회원가입 중 오류가 발생했습니다.");
     }

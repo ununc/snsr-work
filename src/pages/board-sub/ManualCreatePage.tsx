@@ -1,4 +1,4 @@
-import { getDownloadUrl, uploadImage } from "@/apis/minio/images";
+import { uploadImage } from "@/apis/minio/images";
 import { Editor } from "@/components/editor/Editor";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,28 +9,36 @@ import { ChangeEvent, useState } from "react";
 
 export const ManualCreatePage = () => {
   const [title, setTitle] = useState("");
+  const [loading, setLoading] = useState(false);
   const { text } = useChangedStringStore();
   const { pendingImages } = useImageStore();
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { value } = e.target;
     setTitle(value);
   };
-  const handleCreate = () => {
-    let data = text;
-    pendingImages.forEach((image) => {
-      uploadImage(image.url, image.file);
-      data = data.replace(image.base64, image.objectName);
-    });
-    console.log(data);
+  const handleCreate = async () => {
+    setLoading(true);
+    try {
+      const uploadPromises = [];
+      let currentText = text;
+
+      for (const image of pendingImages) {
+        if (currentText.includes(image.objectUrl)) {
+          currentText = currentText.replace(image.objectUrl, image.objectName);
+          uploadPromises.push(uploadImage(image.url, image.file));
+        }
+      }
+
+      await Promise.all(uploadPromises);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const test = async () => {
-    // image.objectName 을 통해 getDownloadUrl을 만들고 결과를 image.objectName과 replace하여 사용자에게 보여준다...
-    const data = await getDownloadUrl(
-      "users/0f7042ca-4a07-49f6-909e-69fc9e537ba8/files/1734192733020-hcsb-qrcode.png"
-    );
-    console.log(data);
-  };
+  const template = "";
+
   return (
     <div className="h-full p-4 flex flex-col">
       <h1 className="text-2xl font-bold">매뉴얼 작성</h1>
@@ -41,14 +49,23 @@ export const ManualCreatePage = () => {
       <Label className="mt-2">내용</Label>
 
       <div className="flex-1 min-h-0 mt-1">
-        <Editor />
+        <Editor text={template} />
       </div>
 
       <div className="flex justify-end gap-2 mt-2">
-        <Button variant="outline" onClick={test}>
+        <Button variant="outline" disabled={loading}>
           템플릿
         </Button>
-        <Button onClick={handleCreate}>생성</Button>
+        <Button
+          disabled={
+            loading ||
+            text ===
+              `{"root":{"children":[{"children":[],"direction":null,"format":"","indent":0,"type":"paragraph","version":1,"textFormat":0,"textStyle":""}],"direction":null,"format":"","indent":0,"type":"root","version":1}}`
+          }
+          onClick={handleCreate}
+        >
+          생성
+        </Button>
       </div>
     </div>
   );

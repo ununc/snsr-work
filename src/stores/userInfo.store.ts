@@ -24,22 +24,18 @@ interface User {
 interface UserStore {
   user: User | null;
   setUser: (user: User) => void;
+  setPersistUser: (user: User) => void;
   clearUser: () => void;
-  updateUser: (userData: Partial<User>) => void;
   loadUser: () => void;
 }
 
 export const useUserStore = create<UserStore>((set) => ({
   user: null,
   setUser: (user) => {
-    if (user.autoLogin) {
-      localStorage.setItem(
-        "user-storage",
-        JSON.stringify({ state: { user }, version: 0 })
-      );
-    } else {
-      localStorage.removeItem("user-storage");
-    }
+    set({ user });
+  },
+  setPersistUser: (user) => {
+    localStorage.setItem("user-storage", JSON.stringify({ user }));
     set({ user });
   },
   clearUser: () => {
@@ -52,8 +48,4 @@ export const useUserStore = create<UserStore>((set) => ({
     const data = JSON.parse(state);
     set({ user: data.state.user });
   },
-  updateUser: (userData) =>
-    set((state) => ({
-      user: state.user ? { ...state.user, ...userData } : null,
-    })),
 }));

@@ -1,20 +1,25 @@
-const urlsToCache = ["/", "/index.html"];
-// const version = "SW_VERSION";
-// const domain = "SERVER_URL";
-// const pushKey = "VAPID_PUBLIC_KEY";
-
 const version = "0.0.1";
 const domain = "https://hcsb.synology.me:6555";
 const pushKey =
   "BNTNlbgs6jawRIR-1Q9VLbYcT3ZuZP8qbregBP7iYN3cAXjtaZ2gFyoqf8ESy-MSNUjcaUNjAuFL18spAWsMSZs";
+const STATIC_ASSETS = [
+  { url: "/dist/", cacheName: "static-assets-" + version },
+  { url: "/dist/index.html", cacheName: "static-assets-" + version },
+  { url: "/dist/assets/", cacheName: "static-assets-" + version },
+];
+// const version = "SW_VERSION";
+// const domain = "SERVER_URL";
+// const pushKey = "VAPID_PUBLIC_KEY";
 
 // 버전이 오르면 다시 등록 되면서 install 실행
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    // 앱 구동에 필요한 파일들을 미리 캐시에 저장
-    caches.open(version).then((cache) => {
-      return cache.addAll(urlsToCache);
-    })
+    Promise.all(
+      STATIC_ASSETS.map(async (asset) => {
+        const cache = await caches.open(asset.cacheName);
+        return cache.add(asset.url);
+      })
+    )
   );
 });
 /*
@@ -36,7 +41,6 @@ const handleApiRequest = async (request) => {
 
     const headers = new Headers(request.headers);
     headers.set("Origin", new URL(domain).origin);
-
     const requestInit = {
       method: request.method,
       headers: request.headers,
@@ -60,16 +64,6 @@ const handleApiRequest = async (request) => {
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
-    // 새로운 응답 생성
-    // console.log(response.headers.get("set-cookie"));
-
-    // const headers2 = {};
-    // response.headers.forEach((value, key) => {
-    //   headers2[key] = value;
-    // });
-    // console.log(headers2);
-    // 특별히 Set-Cookie 헤더 추출
-
     return response;
   } catch (error) {
     console.error("API request failed:", error);
@@ -144,18 +138,20 @@ const checkIfUpdateNeeded = async () => {
   // 현재 캐시된 버전들 확인
   const cacheNames = await caches.keys();
 
-  // version이 현재 캐시 목록에 없다면 업데이트 필요
-  if (!cacheNames.includes(version)) {
+  // static-assets으로 시작하는 캐시 확인
+  const staticCacheName = "static-assets-" + version;
+  if (!cacheNames.includes(staticCacheName)) {
     return true;
   }
 
   // 캐시된 리소스 확인
-  const cache = await caches.open(version);
+  const cache = await caches.open(staticCacheName);
   const cachedUrls = await cache.keys();
 
-  // 현재 캐시된 URL들과 새로운 urlsToCache 비교
-  const isMissingUrls = urlsToCache.some(
-    (url) => !cachedUrls.some((cachedUrl) => cachedUrl.url === url)
+  // 현재 캐시된 URL들과 새로운 STATIC_ASSETS 비교
+  const isMissingUrls = STATIC_ASSETS.some(
+    (asset) =>
+      !cachedUrls.some((cachedUrl) => cachedUrl.url.includes(asset.url))
   );
 
   return isMissingUrls;
@@ -164,22 +160,31 @@ const checkIfUpdateNeeded = async () => {
 self.addEventListener("activate", async (event) => {
   event.waitUntil(
     (async () => {
-      // 업데이트 필요 여부 확인
       const needsUpdate = await checkIfUpdateNeeded();
 
       if (needsUpdate) {
-        // 이전 버전의 캐시 삭제
+        // 캐시 스토리지만 관리하고 로컬스토리지는 건드리지 않도록 수정
         await caches.keys().then((cacheNames) => {
-          return Promise.all(
-            cacheNames.map((cacheName) => {
-              if (cacheName !== version) {
-                return caches.delete(cacheName);
-              }
-            })
-          );
+          const cacheDeletePromises = cacheNames.map((cacheName) => {
+            // static assets 캐시만 관리
+            if (cacheName !== version && cacheName.startsWith("static-")) {
+              return caches.delete(cacheName);
+            }
+            return Promise.resolve();
+          });
+          return Promise.all(cacheDeletePromises);
         });
 
-        // 새로운 서비스워커가 즉시 페이지 제어하도록 설정
+        // 새로운 서비스워커가 페이지를 제어하기 전에 상태를 보존
+        const allClients = await self.clients.matchAll();
+        allClients.forEach((client) => {
+          // 클라이언트에게 서비스워커 업데이트 알림
+          client.postMessage({
+            type: "SW_UPDATE",
+            payload: { version },
+          });
+        });
+
         await self.clients.claim();
       }
     })()
@@ -219,22 +224,18 @@ self.addEventListener("push", function (event) {
   // 알림 옵션 설정
   const options = {
     body: data.body,
-    data: {
-      url: data.url, // 클릭시 이동할 URL
-    },
+    data: data.data,
     // 추가 알림 옵션들
     icon: "/icons/android-chrome-192x192.svg", // 192x192px 권장
     badge: "/icons/apple-touch-icon.svg", // 72x72px 권장
-    vibrate: [200, 100, 200],
     renotify: true,
-    tag: data.tag || "default-tag",
+    tag: "default-tag",
     actions: [
       // iOS는 최대 2개의 액션 버튼 지원
       { action: "view", title: "보기" },
       { action: "close", title: "닫기" },
     ],
   };
-
   event.waitUntil(
     // 알림 표시
     self.registration.showNotification(data.title, options)
@@ -308,6 +309,9 @@ self.addEventListener("pushsubscriptionchange", function (event) {
       .then(function (subscription) {
         // 서버에 새로운 구독 정보 전송
         return sendSubscriptionToServer(subscription, "subscribe");
+      })
+      .catch((error) => {
+        console.error("Error during service worker unregistration:", error);
       })
   );
 });

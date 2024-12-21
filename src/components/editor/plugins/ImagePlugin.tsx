@@ -4,24 +4,20 @@ import { $insertNodes } from "lexical";
 
 import { $createImageNode } from "../nodes/ImageNode";
 import { useImageStore } from "../../../stores/tempImage.store";
-import { useUserStore } from "@/stores/userInfo.store";
 import { INSERT_IMAGE_COMMAND } from "../command";
 import { getPresignedUrl } from "@/apis/minio/images";
+import { useGlobalStore } from "@/stores/global.store";
 
 type InsertImagePayload = File;
-const fileToBase64 = (file: File): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = (error) => reject(error);
-  });
+
+const fileToUrl = (file: File): string => {
+  return URL.createObjectURL(file);
 };
 
 export default function ImagePlugin(): null {
   const [editor] = useLexicalComposerContext();
   const { addPendingImage } = useImageStore();
-  const { user } = useUserStore();
+  const { userInfo } = useGlobalStore();
 
   useEffect(() => {
     return editor.registerCommand<InsertImagePayload>(
@@ -33,18 +29,13 @@ export default function ImagePlugin(): null {
         // 비동기 작업을 별도로 실행
         (async () => {
           try {
-            // Backend에서 presigned URL 요청
-            const { url, objectName } = await getPresignedUrl(
-              user?.pid ?? "",
-              file.name
-            );
-
-            // 파일을 base64로 변환
-            const base64 = await fileToBase64(file);
-
+            const [{ url, objectName }] = await Promise.all([
+              getPresignedUrl(userInfo?.pid ?? "", file.name),
+            ]);
+            const objectUrl = fileToUrl(file);
             // 비동기 작업이 완료된 후 에디터 업데이트
             editor.update(() => {
-              const imageNode = $createImageNode(base64, file.name);
+              const imageNode = $createImageNode(objectUrl, file.name);
               $insertNodes([imageNode]);
             });
 
@@ -53,7 +44,7 @@ export default function ImagePlugin(): null {
               objectName,
               url,
               file,
-              base64,
+              objectUrl,
             });
           } catch (error) {
             console.error("Failed to process image:", error);

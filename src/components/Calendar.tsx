@@ -25,7 +25,6 @@ interface Holiday {
   name: string;
 }
 
-// 한국 공휴일 데이터
 const KOREAN_HOLIDAYS: Holiday[] = [
   { year: 2024, month: 1, day: 1, name: "신정" },
   { year: 2024, month: 2, day: 9, name: "설날 연휴" },
@@ -45,7 +44,6 @@ const KOREAN_HOLIDAYS: Holiday[] = [
   { year: 2024, month: 10, day: 9, name: "한글날" },
   { year: 2024, month: 12, day: 25, name: "크리스마스" },
 
-  // 2025년 공휴일
   { year: 2025, month: 1, day: 1, name: "신정" },
   { year: 2025, month: 1, day: 28, name: "설날 연휴" },
   { year: 2025, month: 1, day: 29, name: "설날" },
@@ -60,15 +58,75 @@ const KOREAN_HOLIDAYS: Holiday[] = [
   { year: 2025, month: 10, day: 5, name: "추석 연휴" },
   { year: 2025, month: 10, day: 6, name: "추석" },
   { year: 2025, month: 10, day: 7, name: "추석 연휴" },
+  { year: 2025, month: 10, day: 8, name: "추석(대체공휴일)" },
   { year: 2025, month: 10, day: 9, name: "한글날" },
   { year: 2025, month: 12, day: 25, name: "크리스마스" },
+
+  { year: 2026, month: 1, day: 1, name: "신정(양력설)" },
+  { year: 2026, month: 2, day: 16, name: "설날 연휴" },
+  { year: 2026, month: 2, day: 17, name: "설날" },
+  { year: 2026, month: 2, day: 18, name: "설날 연휴" },
+  { year: 2026, month: 3, day: 1, name: "3·1절" },
+  { year: 2026, month: 3, day: 2, name: "대체공휴일(3·1절)" },
+  { year: 2026, month: 5, day: 5, name: "어린이날" },
+  { year: 2026, month: 5, day: 24, name: "부처님 오신날" },
+  { year: 2026, month: 5, day: 25, name: "대체공휴일(부처님 오신날)" },
+  { year: 2026, month: 6, day: 6, name: "현충일" },
+  { year: 2026, month: 8, day: 15, name: "광복절" },
+  { year: 2026, month: 8, day: 17, name: "대체공휴일(광복절)" },
+  { year: 2026, month: 9, day: 24, name: "추석 연휴" },
+  { year: 2026, month: 9, day: 25, name: "추석" },
+  { year: 2026, month: 9, day: 26, name: "추석 연휴" },
+  { year: 2026, month: 10, day: 3, name: "개천절" },
+  { year: 2026, month: 10, day: 5, name: "대체공휴일(개천절)" },
+  { year: 2026, month: 10, day: 9, name: "한글날" },
+  { year: 2026, month: 12, day: 25, name: "크리스마스" },
+
+  { year: 2027, month: 1, day: 1, name: "신정(양력설)" },
+  { year: 2027, month: 2, day: 6, name: "설날 연휴" },
+  { year: 2027, month: 2, day: 7, name: "설날" },
+  { year: 2027, month: 2, day: 8, name: "설날 연휴" },
+  { year: 2027, month: 2, day: 9, name: "대체공휴일(설날)" },
+  { year: 2027, month: 3, day: 1, name: "3·1절" },
+  { year: 2027, month: 3, day: 3, name: "21대 대통령선거" },
+  { year: 2027, month: 5, day: 5, name: "어린이날" },
+  { year: 2027, month: 5, day: 13, name: "부처님 오신날" },
+  { year: 2027, month: 6, day: 6, name: "현충일" },
+  { year: 2027, month: 8, day: 15, name: "광복절" },
+  { year: 2027, month: 8, day: 16, name: "대체공휴일(광복절)" },
+  { year: 2027, month: 9, day: 14, name: "추석 연휴" },
+  { year: 2027, month: 9, day: 15, name: "추석" },
+  { year: 2027, month: 9, day: 16, name: "추석 연휴" },
+  { year: 2027, month: 10, day: 3, name: "개천절" },
+  { year: 2027, month: 10, day: 4, name: "대체공휴일(개천절)" },
+  { year: 2027, month: 10, day: 9, name: "한글날" },
+  { year: 2027, month: 10, day: 11, name: "대체공휴일(한글날)" },
+  { year: 2027, month: 12, day: 25, name: "크리스마스" },
+  { year: 2027, month: 12, day: 27, name: "대체공휴일(크리스마스)" },
+
+  { year: 2028, month: 1, day: 1, name: "신정(양력설)" },
+  { year: 2028, month: 1, day: 26, name: "설날 연휴" },
+  { year: 2028, month: 1, day: 27, name: "설날" },
+  { year: 2028, month: 1, day: 28, name: "설날 연휴" },
+  { year: 2028, month: 3, day: 1, name: "3·1절" },
+  { year: 2028, month: 4, day: 12, name: "23대 국회의원 선거" },
+  { year: 2028, month: 5, day: 2, name: "부처님 오신날" },
+  { year: 2028, month: 5, day: 5, name: "어린이날" },
+  { year: 2028, month: 6, day: 6, name: "현충일" },
+  { year: 2028, month: 8, day: 15, name: "광복절" },
+  { year: 2028, month: 10, day: 2, name: "추석 연휴" },
+  { year: 2028, month: 10, day: 3, name: "개천절" },
+  { year: 2028, month: 10, day: 3, name: "추석" },
+  { year: 2028, month: 10, day: 4, name: "추석 연휴" },
+  { year: 2028, month: 10, day: 5, name: "대체공휴일(개천절)" },
+  { year: 2028, month: 10, day: 9, name: "한글날" },
+  { year: 2028, month: 12, day: 25, name: "크리스마스" },
 ];
 
 interface CalendarProps {
   events: CalendarEvent[];
   year: number;
   month: number;
-  onCreateEvent?: (event: Omit<CalendarEvent, "id">) => void;
 }
 
 const COLORS = [
@@ -181,11 +239,10 @@ export const Calendar = ({ events, year, month }: CalendarProps) => {
     const days = [];
     let currentWeek = [];
     const eventLines = calculateEventLines();
-    const maxLines = Math.max(...Array.from(eventLines.values()), 0) + 1;
 
     for (let i = 0; i < firstDay; i++) {
       currentWeek.push(
-        <div key={`empty-${i}`} className="h-full min-h-24 p-1" />
+        <div key={`empty-${i}`} className="h-full min-h-20 p-1" />
       );
     }
 
@@ -199,7 +256,7 @@ export const Calendar = ({ events, year, month }: CalendarProps) => {
       const dateColor = isWeekend || isHoliday ? "text-red-600" : "";
 
       currentWeek.push(
-        <div key={i} className="h-full min-h-24 relative cursor-pointer">
+        <div key={i} className="h-full min-h-16 relative cursor-pointer">
           <div className="px-1">
             <div className={`text-sm ${dateColor}`}>{i}</div>
             {holidays.map((holiday) => (
@@ -211,12 +268,7 @@ export const Calendar = ({ events, year, month }: CalendarProps) => {
               </div>
             ))}
           </div>
-          <div
-            className="relative"
-            style={{
-              height: `${maxLines * 1.5}rem`,
-            }}
-          >
+          <div className="relative">
             {dayEvents.map((event: CalendarEvent) => {
               const isFirstDay = i === event.day;
               const isFirstDayOfWeek = (i + firstDay - 1) % 7 === 0;
@@ -258,7 +310,7 @@ export const Calendar = ({ events, year, month }: CalendarProps) => {
           currentWeek.push(
             <div
               key={`empty-end-${currentWeek.length}`}
-              className="h-full min-h-24 p-1"
+              className="h-full min-h-16 p-1"
             />
           );
         }
@@ -294,9 +346,9 @@ export const Calendar = ({ events, year, month }: CalendarProps) => {
     return event.period > 1 ? `${startDate} ~ ${endDate}` : startDate;
   };
   return (
-    <div className="h-full">
+    <div>
       <div
-        className={`divide-y h-full grid grid-rows-[repeat(${weeksInMonth},1fr)]`}
+        className={`divide-y h-[calc(100dvh-13rem)] grid grid-rows-[repeat(${weeksInMonth},1fr)]`}
       >
         {renderCalendar()}
       </div>

@@ -137,7 +137,7 @@ export const CalendarPage = () => {
       </div>
 
       <div
-        className="flex-1 p-4"
+        className="p-4"
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >

@@ -6,7 +6,6 @@ export const getPresignedUrl = async (userId: string, fileName: string) => {
     userId,
     fileName,
   });
-  console.log(data);
   return data;
 };
 

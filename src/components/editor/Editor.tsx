@@ -17,10 +17,7 @@ import { InitialContentPlugin } from "./plugins/InitialContentPlugin";
 import { OnChangePlugin } from "./plugins/OnChangePlugin";
 import { AutoLinkPlugin } from "./plugins/AutoLinkPlugin";
 import { TablePastePlugin } from "./plugins/TablePastePlugin";
-import {
-  useChangedStringStore,
-  useInitStringStore,
-} from "@/stores/editor.store";
+import { useChangedStringStore } from "@/stores/editor.store";
 
 const theme = {
   text: {
@@ -62,9 +59,8 @@ const initialConfig = {
   ],
 };
 
-export const Editor = () => {
+export const Editor = ({ text }: { text: string }) => {
   const { setText } = useChangedStringStore();
-  const { text } = useInitStringStore();
   const handleChange = (content: string) => {
     setText(content);
   };

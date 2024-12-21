@@ -12,10 +12,3 @@ export const useChangedStringStore = create<TextState>((set) => ({
   setText: (newText: string) => set({ text: newText }),
   clearText: () => set({ text: "" }),
 }));
-
-// initString store 정의
-export const useInitStringStore = create<TextState>((set) => ({
-  text: "",
-  setText: (newText: string) => set({ text: newText }),
-  clearText: () => set({ text: "" }),
-}));

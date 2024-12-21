@@ -13,20 +13,20 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useUserStore } from "@/stores/userInfo.store";
 import React from "react";
 import { useServiceWorkerStore } from "@/stores/serviceWorkerStore";
 import { UpdatePrompt } from "./UpdatePrompt";
 import { NotificationPermissionButton } from "./NotificationPermissionButton";
+import { useGlobalStore } from "@/stores/global.store";
 
 export const BottomNav = () => {
   const navigate = useNavigate();
-  const { user } = useUserStore();
+  const { userInfo } = useGlobalStore();
   const { showUpdatePrompt } = useServiceWorkerStore();
 
-  const parentItems = user?.menuList.filter((item) => !item.owner);
+  const parentItems = userInfo?.menuList?.filter((item) => !item.owner);
   const getChildItems = (parentId: string) => {
-    return user?.menuList
+    return userInfo?.menuList
       ?.filter((item) => item.owner === parentId)
       .sort((a, b) => a.order - b.order);
   };
