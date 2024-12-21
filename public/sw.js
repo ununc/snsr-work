@@ -219,22 +219,18 @@ self.addEventListener("push", function (event) {
   // 알림 옵션 설정
   const options = {
     body: data.body,
-    data: {
-      url: data.url, // 클릭시 이동할 URL
-    },
+    data: data.data,
     // 추가 알림 옵션들
     icon: "/icons/android-chrome-192x192.svg", // 192x192px 권장
     badge: "/icons/apple-touch-icon.svg", // 72x72px 권장
-    vibrate: [200, 100, 200],
     renotify: true,
-    tag: data.tag || "default-tag",
+    tag: "default-tag",
     actions: [
       // iOS는 최대 2개의 액션 버튼 지원
       { action: "view", title: "보기" },
       { action: "close", title: "닫기" },
     ],
   };
-
   event.waitUntil(
     // 알림 표시
     self.registration.showNotification(data.title, options)
@@ -308,6 +304,9 @@ self.addEventListener("pushsubscriptionchange", function (event) {
       .then(function (subscription) {
         // 서버에 새로운 구독 정보 전송
         return sendSubscriptionToServer(subscription, "subscribe");
+      })
+      .catch((error) => {
+        console.error("Error during service worker unregistration:", error);
       })
   );
 });
