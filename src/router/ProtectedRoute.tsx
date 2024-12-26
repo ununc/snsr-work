@@ -26,8 +26,8 @@ export const ProtectedRoute = () => {
   if (isAuthenticated === null) return <div></div>;
 
   return isAuthenticated ? (
-    <div className="h-full">
-      <div className="h-[calc(100%-80px)]">
+    <div className="h-full flex flex-col">
+      <div className="flex flex-1 relative overflow-hidden">
         <Outlet />
       </div>
       <BottomNav />

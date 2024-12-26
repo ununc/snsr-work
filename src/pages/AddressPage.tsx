@@ -127,10 +127,9 @@ export const AddressPage = () => {
   }
 
   if (myPage) {
-    console.log(userInfo);
     return (
-      <div className="overflow-hidden h-full p-4">
-        <Card>
+      <div className="page-wrapper">
+        <Card className="page-body">
           <div className="flex justify-start items-center p-6 gap-6">
             <UserCircle className="w-12 h-12 text-primary" />
             <div className="mt-1">
@@ -198,7 +197,7 @@ export const AddressPage = () => {
                 <Label className="text-sm text-muted-foreground">
                   메뉴 권한
                 </Label>
-                <div className="grid grid-cols-2 gap-2 h-16 overflow-y-auto">
+                <div className="grid grid-cols-2 gap-2 min-h-16 max-h-28 overflow-y-auto">
                   {userInfo?.menuList?.map((menu) => (
                     <Badge key={menu.id} variant="outline">
                       {menu.name}
@@ -221,7 +220,7 @@ export const AddressPage = () => {
 
         <Button
           variant="ghost"
-          className="w-full flex justify-start my-4 items-center gap-2"
+          className="w-full flex justify-start mt-4 items-center gap-2"
           onClick={() => setMyPage(false)}
         >
           <ChevronRight className="h-4 w-4 rotate-180" />
@@ -232,8 +231,8 @@ export const AddressPage = () => {
   }
 
   return (
-    <div className="overflow-hidden h-full">
-      <div className="w-full flex justify-between mt-6 px-4 mb-4">
+    <div className="page-wrapper">
+      <div className="flex justify-between items-center mb-4">
         <Label className="text-xl font-bold">대학 청년부 연락처</Label>
         <Button
           variant="outline"
@@ -247,8 +246,8 @@ export const AddressPage = () => {
         </Button>
       </div>
 
-      <div className="h-[calc(100dvh-11.5rem)] overflow-y-auto px-4">
-        <div className="space-y-3">
+      <div className="page-body">
+        <div className="space-y-3 ">
           {contacts.map((contact) => (
             <Card key={contact.role}>
               <CardContent className="p-4">

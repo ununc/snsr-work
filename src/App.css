@@ -27,6 +27,14 @@ body {
   width: 0px;
 }
 
+.page-wrapper {
+  @apply absolute inset-0 overflow-hidden h-full flex flex-col px-4 pb-4 pt-8;
+}
+
+.page-body {
+  @apply flex-1 flex flex-col overflow-y-auto;
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;

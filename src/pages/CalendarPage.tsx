@@ -93,51 +93,51 @@ export const CalendarPage = () => {
   }, [year, month]);
 
   return (
-    <div className="pt-6 flex flex-col h-full">
-      <div className="px-4">
+    <div className="page-wrapper">
+      <div className="h-9 flex items-center">
         <Label className="text-xl font-bold">대학 청년부 일정</Label>
-        <div className="flex gap-4 mt-4">
-          <div className="flex items-center gap-2">
-            <Label>연도:</Label>
-            <Select
-              value={year.toString()}
-              onValueChange={(value) => setYear(Number(value))}
-            >
-              <SelectTrigger className="w-24">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {years.map((y) => (
-                  <SelectItem key={y} value={y.toString()}>
-                    {y}년
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex items-center gap-2">
-            <Label>월:</Label>
-            <Select
-              value={month.toString()}
-              onValueChange={(value) => setMonth(Number(value))}
-            >
-              <SelectTrigger className="w-20">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {months.map((m) => (
-                  <SelectItem key={m} value={m.toString()}>
-                    {m}월
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+      </div>
+      <div className="flex gap-4 mb-4 mt-2">
+        <div className="flex items-center gap-2">
+          <Label>연도:</Label>
+          <Select
+            value={year.toString()}
+            onValueChange={(value) => setYear(Number(value))}
+          >
+            <SelectTrigger className="w-24">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {years.map((y) => (
+                <SelectItem key={y} value={y.toString()}>
+                  {y}년
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex items-center gap-2">
+          <Label>월:</Label>
+          <Select
+            value={month.toString()}
+            onValueChange={(value) => setMonth(Number(value))}
+          >
+            <SelectTrigger className="w-20">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {months.map((m) => (
+                <SelectItem key={m} value={m.toString()}>
+                  {m}월
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
       <div
-        className="p-4"
+        className="page-body"
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >

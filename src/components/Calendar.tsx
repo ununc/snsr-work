@@ -346,9 +346,9 @@ export const Calendar = ({ events, year, month }: CalendarProps) => {
     return event.period > 1 ? `${startDate} ~ ${endDate}` : startDate;
   };
   return (
-    <div>
+    <div className="h-full">
       <div
-        className={`divide-y h-[calc(100dvh-13rem)] grid grid-rows-[repeat(${weeksInMonth},1fr)]`}
+        className={`divide-y h-full grid grid-rows-[repeat(${weeksInMonth},1fr)]`}
       >
         {renderCalendar()}
       </div>

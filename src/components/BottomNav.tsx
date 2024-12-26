@@ -36,14 +36,14 @@ export const BottomNav = () => {
   };
 
   return (
-    <>
-      <nav className="w-full shrink-0 bg-white border-t-2 border-gray-200 relative">
+    <div className="shrink-0 pb-10">
+      <nav className="w-full bg-white border-t-2 border-gray-200 relative">
         {showUpdatePrompt ? <UpdatePrompt /> : <NotificationPermissionButton />}
         <div className="flex justify-around items-center">
           <NavLink
             to="/news"
             className={({ isActive }) =>
-              `w-full pt-3 pb-5 flex flex-col items-center  ${
+              `w-full pt-3  flex flex-col items-center  ${
                 isActive ? "text-blue-600" : "text-gray-600"
               }`
             }
@@ -54,7 +54,7 @@ export const BottomNav = () => {
           <NavLink
             to="/programme"
             className={({ isActive }) =>
-              `w-full pt-3 pb-5 flex flex-col items-center  ${
+              `w-full pt-3  flex flex-col items-center  ${
                 isActive ? "text-blue-600" : "text-gray-600"
               }`
             }
@@ -64,7 +64,7 @@ export const BottomNav = () => {
           <NavLink
             to="/calendar"
             className={({ isActive }) =>
-              `w-full pt-3 pb-5 flex flex-col items-center  ${
+              `w-full pt-3  flex flex-col items-center  ${
                 isActive ? "text-blue-600" : "text-gray-600"
               }`
             }
@@ -75,7 +75,7 @@ export const BottomNav = () => {
           <NavLink
             to="/address"
             className={({ isActive }) =>
-              `w-full pt-3 pb-5 flex flex-col items-center  ${
+              `w-full pt-3  flex flex-col items-center  ${
                 isActive ? "text-blue-600" : "text-gray-600"
               }`
             }
@@ -85,7 +85,7 @@ export const BottomNav = () => {
 
           {parentItems?.length ? (
             <DropdownMenu>
-              <DropdownMenuTrigger className="w-full pt-3 pb-5 flex flex-col items-center text-gray-600 hover:text-blue-600 focus:outline-none">
+              <DropdownMenuTrigger className="w-full pt-3  flex flex-col items-center text-gray-600 hover:text-blue-600 focus:outline-none">
                 <NotebookPen size={22} />
               </DropdownMenuTrigger>
               <DropdownMenuContent
@@ -116,6 +116,6 @@ export const BottomNav = () => {
         </div>
       </nav>
       <div className="w-full h-safe-bottom" />
-    </>
+    </div>
   );
 };

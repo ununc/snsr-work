@@ -22,9 +22,9 @@ export const App = () => {
     <BrowserRouter>
       <div className="w-full h-full mx-auto max-w-md flex flex-col">
         <div className="w-full h-safe-top" />
-        <main className="flex-1">
+        <div className="flex-1">
           <PathController />
-        </main>
+        </div>
         <Toaster />
       </div>
     </BrowserRouter>
