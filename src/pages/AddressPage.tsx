@@ -9,11 +9,18 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Phone, UserCircle, Mail, ChevronRight } from "lucide-react";
+import {
+  Phone,
+  UserCircle,
+  Mail,
+  ChevronRight,
+  RefreshCcw,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useGlobalStore } from "@/stores/global.store";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+import { useServiceWorkerStore } from "@/stores/serviceWorkerStore";
 
 interface Contact {
   role: string;
@@ -45,6 +52,7 @@ export const AddressPage = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const { userInfo, autoLogin, clearUserData } = useGlobalStore();
+  const { checkForUpdates } = useServiceWorkerStore();
   useEffect(() => {
     const getAddresses = async () => {
       try {
@@ -110,6 +118,10 @@ export const AddressPage = () => {
     navigate("/account/login");
   };
 
+  const checkUpdate = async () => {
+    await checkForUpdates();
+  };
+
   if (error) {
     return (
       <div className="flex justify-center items-center h-32 text-muted-foreground">
@@ -130,7 +142,7 @@ export const AddressPage = () => {
     return (
       <div className="page-wrapper">
         <Card className="page-body">
-          <div className="flex justify-start items-center p-6 gap-6">
+          <div className="flex justify-start items-center p-6 gap-6 relative">
             <UserCircle className="w-12 h-12 text-primary" />
             <div className="mt-1">
               <div className="flex gap-2">
@@ -145,6 +157,9 @@ export const AddressPage = () => {
                 {userInfo?.email || "이메일 없음"}
               </CardDescription>
             </div>
+            <button onClick={checkUpdate} className="absolute top-6 right-6">
+              <RefreshCcw className="w-5 h-5" />
+            </button>
           </div>
           <CardContent>
             <div className="space-y-4">
@@ -197,7 +212,7 @@ export const AddressPage = () => {
                 <Label className="text-sm text-muted-foreground">
                   메뉴 권한
                 </Label>
-                <div className="grid grid-cols-2 gap-2 min-h-16 max-h-28 overflow-y-auto">
+                <div className="grid grid-cols-2 gap-2 min-h-12 max-h-20 overflow-y-auto">
                   {userInfo?.menuList?.map((menu) => (
                     <Badge key={menu.id} variant="outline">
                       {menu.name}

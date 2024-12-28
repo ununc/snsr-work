@@ -36,7 +36,7 @@ export const BottomNav = () => {
   };
 
   return (
-    <div className="shrink-0 pb-10">
+    <div className="shrink-0 pb-6">
       <nav className="w-full bg-white border-t-2 border-gray-200 relative">
         {showUpdatePrompt ? <UpdatePrompt /> : <NotificationPermissionButton />}
         <div className="flex justify-around items-center">

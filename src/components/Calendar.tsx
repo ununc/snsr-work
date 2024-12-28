@@ -250,10 +250,17 @@ export const Calendar = ({ events, year, month }: CalendarProps) => {
       const dayEvents = getEventsForDay(i);
       const holidays = getHolidaysForDay(i);
       const dayIndex = (i + firstDay - 1) % 7;
-      const isWeekend = dayIndex === 0 || dayIndex === 6;
+      const isSunday = dayIndex === 0;
+      const isSaturday = dayIndex === 6;
       const isHoliday = holidays.length > 0;
 
-      const dateColor = isWeekend || isHoliday ? "text-red-600" : "";
+      // 일요일이거나 공휴일이면 빨간색, 토요일이면서 공휴일이 아니면 파란색, 나머지는 기본색
+      const dateColor =
+        isSunday || isHoliday
+          ? "text-red-600"
+          : isSaturday
+          ? "text-blue-600"
+          : "";
 
       currentWeek.push(
         <div key={i} className="h-full min-h-16 relative cursor-pointer">

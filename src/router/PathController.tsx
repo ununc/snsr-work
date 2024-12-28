@@ -10,7 +10,6 @@ import { NewsPage } from "@/pages/NewsPage";
 import { ManualPage } from "@/pages/board-sub/ManualPage";
 import { MonthlyReportPage } from "@/pages/board-sub/MonthlyReportPage";
 import { CollegeLeaderReportPage } from "@/pages/board-sub/CollegeLeaderReportPage";
-import { YouthLeaderReportPage } from "@/pages/board-sub/YouthLeaderReportPage";
 import { PraiseSheetPage } from "@/pages/board-sub/PraiseSheetPage";
 import { SpecialSongSheetPage } from "@/pages/board-sub/SpecialSongSheetPage";
 import { EventPlanPage } from "@/pages/board-sub/EventPlanPage";
@@ -41,11 +40,11 @@ export const PathController = () => {
           <Route path="monthly-report" element={<MonthlyReportPage />} />
           <Route
             path="college-leader-report"
-            element={<CollegeLeaderReportPage />}
+            element={<CollegeLeaderReportPage daechung={true} />}
           />
           <Route
             path="youth-leader-report"
-            element={<YouthLeaderReportPage />}
+            element={<CollegeLeaderReportPage daechung={false} />}
           />
           <Route path="praise-sheet" element={<PraiseSheetPage />} />
           <Route path="special-song-sheet" element={<SpecialSongSheetPage />} />

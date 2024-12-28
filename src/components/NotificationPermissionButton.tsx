@@ -47,8 +47,6 @@ export const NotificationPermissionButton = () => {
       const permission = await Notification.requestPermission();
       if (!registration) return;
 
-      setPermission(permission);
-
       if (permission === "granted") {
         // 서비스워커 등록 확인
 
@@ -62,6 +60,7 @@ export const NotificationPermissionButton = () => {
         });
         // 서버에 구독 정보 전송
         await sendSubscription(subscription);
+        setPermission(permission);
       }
     } catch (err: unknown) {
       if (err instanceof Error) {
