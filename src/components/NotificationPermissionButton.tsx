@@ -35,7 +35,6 @@ export const NotificationPermissionButton = () => {
 
   const requestNotificationPermission = async () => {
     setLoading(true);
-
     try {
       // 서비스 워커 지원 확인
       if (!("serviceWorker" in navigator) || !("PushManager" in window)) {

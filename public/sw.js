@@ -1,4 +1,4 @@
-const version = "0.0.3";
+const version = "0.0.5";
 const domain = "https://hcsb.synology.me:6555";
 // const domain = "http://localhost:3000";
 const pushKey =
@@ -15,12 +15,17 @@ const STATIC_ASSETS = [
 // 버전이 오르면 다시 등록 되면서 install 실행
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    Promise.all(
-      STATIC_ASSETS.map(async (asset) => {
-        const cache = await caches.open(asset.cacheName);
-        return cache.add(asset.url);
-      })
-    )
+    Promise.all([
+      // 기존 static assets 캐싱
+      Promise.all(
+        STATIC_ASSETS.map(async (asset) => {
+          const cache = await caches.open(asset.cacheName);
+          return cache.add(asset.url);
+        })
+      ),
+      // skipWaiting으로 대기 없이 활성화
+      self.skipWaiting(),
+    ])
   );
 });
 /*
@@ -109,9 +114,33 @@ const handleStaticRequest = async (request) => {
   }
 };
 
+const handleMinioRequest = async (request) => {
+  try {
+    // PUT 요청은 직접 전달
+    if (request.method === "PUT") {
+      const response = await fetch(request.clone());
+      if (!response.ok) {
+        throw new Error(`MinIO upload failed: ${response.status}`);
+      }
+      return response;
+    }
+
+    // GET 등 다른 요청은 일반적인 fetch 수행
+    return fetch(request);
+  } catch {
+    console.error("MinIO request failed:");
+    return new Response("Storage operation failed", {
+      status: 500,
+      headers: { "Content-Type": "text/plain" },
+    });
+  }
+};
+
 self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
-  if (url.pathname.startsWith("/api")) {
+  if (url.hostname === "hcsb.synology.me" && url.port === "5401") {
+    event.respondWith(handleMinioRequest(event.request));
+  } else if (url.pathname.startsWith("/api")) {
     event.respondWith(handleApiRequest(event.request));
   } else {
     event.respondWith(handleStaticRequest(event.request));
@@ -136,57 +165,73 @@ Stale While Revalidate: 캐시 반환하면서 백그라운드에서 업데이�
 */
 
 const checkIfUpdateNeeded = async () => {
-  // 현재 캐시된 버전들 확인
-  const cacheNames = await caches.keys();
+  try {
+    const cacheNames = await caches.keys();
+    const staticCacheName = "static-assets-" + version;
 
-  // static-assets으로 시작하는 캐시 확인
-  const staticCacheName = "static-assets-" + version;
-  if (!cacheNames.includes(staticCacheName)) {
+    if (!cacheNames.includes(staticCacheName)) {
+      return true;
+    }
+
+    const cache = await caches.open(staticCacheName);
+    const cachedUrls = await cache.keys();
+
+    const stripUrl = (url) => {
+      // URL에서 '/dist/' 이후의 경로만 추출
+      const match = url.match(/\/dist\/(.*)/);
+      return match ? match[1] : url;
+    };
+
+    const isMissingUrls = STATIC_ASSETS.some((asset) => {
+      const assetPath = stripUrl(asset.url);
+      return !cachedUrls.some((cachedUrl) => {
+        const cachedPath = stripUrl(cachedUrl.url);
+        // 빈 문자열인 경우(즉, /dist/ 자체인 경우) 처리
+        if (assetPath === "" && cachedPath === "") return true;
+        return cachedPath === assetPath;
+      });
+    });
+
+    return isMissingUrls;
+  } catch (error) {
+    console.error("Failed to check for updates:", error);
     return true;
   }
-
-  // 캐시된 리소스 확인
-  const cache = await caches.open(staticCacheName);
-  const cachedUrls = await cache.keys();
-
-  // 현재 캐시된 URL들과 새로운 STATIC_ASSETS 비교
-  const isMissingUrls = STATIC_ASSETS.some(
-    (asset) =>
-      !cachedUrls.some((cachedUrl) => cachedUrl.url.includes(asset.url))
-  );
-
-  return isMissingUrls;
 };
 
 self.addEventListener("activate", async (event) => {
   event.waitUntil(
     (async () => {
-      const needsUpdate = await checkIfUpdateNeeded();
+      try {
+        const needsUpdate = await checkIfUpdateNeeded();
 
-      if (needsUpdate) {
-        // 캐시 스토리지만 관리하고 로컬스토리지는 건드리지 않도록 수정
-        await caches.keys().then((cacheNames) => {
-          const cacheDeletePromises = cacheNames.map((cacheName) => {
-            // static assets 캐시만 관리
-            if (cacheName !== version && cacheName.startsWith("static-")) {
-              return caches.delete(cacheName);
-            }
-            return Promise.resolve();
+        if (needsUpdate) {
+          // 캐시 스토리지만 관리하고 로컬스토리지는 건드리지 않도록 수정
+          await caches.keys().then((cacheNames) => {
+            const cacheDeletePromises = cacheNames.map((cacheName) => {
+              // static assets 캐시만 관리
+              if (cacheName !== version && cacheName.startsWith("static-")) {
+                return caches.delete(cacheName);
+              }
+              return Promise.resolve();
+            });
+            return Promise.all(cacheDeletePromises);
           });
-          return Promise.all(cacheDeletePromises);
-        });
 
-        // 새로운 서비스워커가 페이지를 제어하기 전에 상태를 보존
-        const allClients = await self.clients.matchAll();
-        allClients.forEach((client) => {
-          // 클라이언트에게 서비스워커 업데이트 알림
-          client.postMessage({
-            type: "SW_UPDATE",
-            payload: { version },
+          // 새로운 서비스워커가 페이지를 제어하기 전에 상태를 보존
+          const allClients = await self.clients.matchAll();
+          allClients.forEach((client) => {
+            // 클라이언트에게 서비스워커 업데이트 알림
+            client.postMessage({
+              type: "SW_UPDATE",
+              payload: { version },
+            });
           });
-        });
 
-        await self.clients.claim();
+          await self.clients.claim();
+        }
+      } catch (error) {
+        console.error("Service Worker activation failed:", error);
       }
     })()
   );

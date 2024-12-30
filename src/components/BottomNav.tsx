@@ -13,7 +13,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import React from "react";
+import React, { useEffect } from "react";
 import { useServiceWorkerStore } from "@/stores/serviceWorkerStore";
 import { UpdatePrompt } from "./UpdatePrompt";
 import { NotificationPermissionButton } from "./NotificationPermissionButton";
@@ -22,7 +22,7 @@ import { useGlobalStore } from "@/stores/global.store";
 export const BottomNav = () => {
   const navigate = useNavigate();
   const { userInfo } = useGlobalStore();
-  const { showUpdatePrompt } = useServiceWorkerStore();
+  const { showUpdatePrompt, initGetRegister } = useServiceWorkerStore();
 
   const parentItems = userInfo?.menuList?.filter((item) => !item.owner);
   const getChildItems = (parentId: string) => {
@@ -34,6 +34,12 @@ export const BottomNav = () => {
   const handleItemClick = (string: string) => {
     navigate(`/board/${string}`);
   };
+
+  useEffect(() => {
+    if ("serviceWorker" in navigator) {
+      initGetRegister();
+    }
+  }, []);
 
   return (
     <div className="shrink-0 pb-6">

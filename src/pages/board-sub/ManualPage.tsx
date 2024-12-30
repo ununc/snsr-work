@@ -1,72 +1,423 @@
+import {
+  BoardAllFiled,
+  createBoard,
+  deleteBoard,
+  editBoard,
+  getBoard,
+  getBoards,
+  ResponseBoardDto,
+} from "@/apis/board/board";
+import { deleteImage, getDownloadUrl, uploadImage } from "@/apis/minio/images";
+import { EditButton } from "@/components/EditButton";
+import { Editor } from "@/components/editor/Editor";
+import { PreviewEditor } from "@/components/editor/Preview";
+import { TemplateButton } from "@/components/TemplateButton";
+// import { MonthSelector } from "@/components/SongDateSelect";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { PlusCircle } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import {
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { useChangedStringStore } from "@/stores/editor.store";
+import { useGlobalStore } from "@/stores/global.store";
+import { useImageStore } from "@/stores/tempImage.store";
+import { Label } from "@radix-ui/react-label";
+import { ChevronRight, Trash2 } from "lucide-react";
+import { ChangeEvent, useEffect, useState } from "react";
 
-export const ManualPage = () => {
-  const navigate = useNavigate();
-  const manuals = [
-    {
-      id: 1,
-      title: "시스템 사용 가이드",
-      author: "김철수",
-      createdAt: "2024-12-12",
-    },
-  ];
-  const canWrite = true;
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("ko-KR", {
-      year: "2-digit",
-      month: "2-digit",
-      day: "2-digit",
-    });
+const init = `{"root":{"children":[{"children":[],"direction":null,"format":"","indent":0,"type":"paragraph","version":1,"textFormat":0,"textStyle":""}],"direction":null,"format":"","indent":0,"type":"root","version":1}}`;
+
+export const ManualPage = ({ boardId }: { boardId: string }) => {
+  // const [selectedDate, setSelectedDate] = useState<string | null>(() => {
+  //   const now = new Date();
+  //   return `${now.getFullYear().toString()}-${(now.getMonth() + 1)
+  //     .toString()
+  //     .padStart(2, "0")}`;
+  // });
+
+  const [isCreate, setIsCreate] = useState<boolean>(false);
+  const [isEdit, setIsEdit] = useState<boolean>(false);
+  const [list, setList] = useState<ResponseBoardDto[]>([]);
+  const [templateList, setTemplateList] = useState<ResponseBoardDto[]>([]);
+  const [manageTemplate, setManageTemplate] = useState<boolean>(false);
+
+  const [objectNames, setObjectNames] = useState<{
+    minioPath: string[];
+    tempDown: string[];
+  }>({
+    minioPath: [],
+    tempDown: [],
+  });
+  const [selectedBoard, setSelectedBoard] = useState<BoardAllFiled | null>(
+    null
+  );
+
+  //
+  const [title, setTitle] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [isTemplate, setIsTemplate] = useState(false);
+  const { text } = useChangedStringStore();
+  const { pendingImages } = useImageStore();
+  const { userInfo } = useGlobalStore();
+  const [initText, setInitText] = useState("");
+
+  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const { value } = e.target;
+    setTitle(value);
+  };
+  const handleTemplateClick = () => {
+    setIsTemplate((prev) => !prev); // 템플릿 상태 토글
   };
 
-  return (
-    <div className="w-full h-full p-4">
-      {/* 헤더 영역 */}
-      <div className="flex justify-between items-center mb-4">
-        <h1 className="text-xl font-bold">매뉴얼</h1>
-        {canWrite && (
+  const objectNameList = (str: string) => {
+    const pattern = /"src":"([^"]+)"/g;
+    return [...str.matchAll(pattern)].map((match) => match[1]);
+  };
+  const handleCreate = async () => {
+    setLoading(true);
+    try {
+      const uploadPromises = [];
+      let currentText = text;
+
+      for (const image of pendingImages) {
+        if (currentText.includes(image.objectUrl)) {
+          currentText = currentText.replace(image.objectUrl, image.objectName);
+          uploadPromises.push(uploadImage(image.url, image.file));
+        }
+      }
+
+      await Promise.all(uploadPromises);
+      await createBoard({
+        title,
+        content: currentText,
+        isTemplate,
+        boardId,
+        authorId: userInfo?.pid ?? "",
+        onlyAuthorCanModify: false,
+      });
+      fetchList();
+      handleCancel();
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleClickCreate = () => {
+    setInitText("");
+    setIsCreate(true);
+  };
+
+  const handleCancel = () => {
+    setSelectedBoard((prev) => {
+      if (prev) {
+        return {
+          ...prev,
+          content: initText,
+        };
+      }
+      return null;
+    });
+    setIsCreate(false);
+    setIsEdit(false);
+    setTitle("");
+    setIsTemplate(false);
+    setObjectNames({
+      minioPath: [],
+      tempDown: [],
+    });
+  };
+  const applyTemplate = async (item: string) => {
+    const board = await getBoard(item);
+    const result = objectNameList(board.content);
+    // 나중에 수정 시 list 비교하여 새로운 것만 추가 및 없어진 objectName 제거 요청
+
+    const imageUrls: string[] = await Promise.all(
+      result.map((path) => getDownloadUrl(path))
+    );
+    setObjectNames({
+      minioPath: result,
+      tempDown: imageUrls,
+    });
+
+    for (let i = 0; i < result.length; i++) {
+      board.content = text.replace(result[i], imageUrls[i]);
+    }
+
+    if (isEdit) {
+      setSelectedBoard((prev) => {
+        if (prev) {
+          setInitText(prev.content);
+          return {
+            ...prev,
+            content: board.content,
+          };
+        }
+        return null;
+      });
+    } else {
+      setInitText(board.content);
+    }
+  };
+
+  const fetchList = async () => {
+    const data = await getBoards(boardId);
+    setList(data.filter((board) => !board.isTemplate));
+    setTemplateList(data.filter((board) => board.isTemplate));
+  };
+
+  const handleCardClick = async (id: string) => {
+    const board = await getBoard(id);
+    const result = objectNameList(board.content);
+    // 나중에 수정 시 list 비교하여 새로운 것만 추가 및 없어진 objectName 제거 요청
+
+    const imageUrls: string[] = await Promise.all(
+      result.map((path) => getDownloadUrl(path))
+    );
+    setObjectNames({
+      minioPath: result,
+      tempDown: imageUrls,
+    });
+
+    for (let i = 0; i < result.length; i++) {
+      board.content = text.replace(result[i], imageUrls[i]);
+    }
+    setSelectedBoard(board);
+  };
+
+  const handleUpdate = async () => {
+    setLoading(true);
+    try {
+      const uploadPromises = [];
+      let currentText = text;
+
+      for (let i = 0; i < objectNames.tempDown.length; i++) {
+        if (currentText.includes(objectNames.tempDown[i])) {
+          currentText = currentText.replace(
+            objectNames.tempDown[i],
+            objectNames.minioPath[i]
+          );
+        } else {
+          uploadPromises.push(deleteImage(objectNames.minioPath[i]));
+        }
+      }
+
+      for (const image of pendingImages) {
+        if (currentText.includes(image.objectUrl)) {
+          currentText = currentText.replace(image.objectUrl, image.objectName);
+          uploadPromises.push(uploadImage(image.url, image.file));
+        }
+      }
+
+      if (selectedBoard) {
+        await Promise.all(uploadPromises);
+        const data = await editBoard({
+          ...selectedBoard,
+          title,
+          content: currentText,
+          isTemplate,
+          modifierId: userInfo?.pid ?? "",
+        });
+        setSelectedBoard(data);
+      }
+      fetchList();
+      handleCancel();
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const deleteBoardResource = async (
+    id: string,
+    event: React.MouseEvent<HTMLButtonElement>
+  ) => {
+    event.stopPropagation();
+    await deleteBoard(id, userInfo?.pid ?? "");
+    fetchList();
+  };
+
+  const backToReport = () => {
+    setSelectedBoard(null);
+  };
+
+  useEffect(() => {
+    fetchList();
+  }, [boardId]);
+
+  useEffect(() => {
+    if (isEdit && selectedBoard) {
+      setTitle(selectedBoard.title);
+      setIsTemplate(selectedBoard.isTemplate);
+    }
+  }, [isEdit, selectedBoard]);
+
+  if (isCreate || isEdit) {
+    return (
+      <div className="page-wrapper">
+        <div className="h-4 flex items-center mb-4">
+          <Label className="text-xl font-bold">
+            {isEdit ? "메뉴얼 수정" : "메뉴얼 작성"}
+          </Label>
+        </div>
+
+        <div className="flex justify-start items-end gap-4">
+          <div className="w-full">
+            <Label className="block mb-1">제목</Label>
+            <Input value={title} onChange={handleChange} />
+          </div>
+
+          <div>
+            <Label className="block mb-1">종류</Label>
+            <Button
+              className="shrink-0 w-16"
+              variant={isTemplate ? "default" : "outline"}
+              onClick={handleTemplateClick}
+            >
+              {isTemplate ? "템플릿" : "기본글"}
+            </Button>
+          </div>
+        </div>
+
+        <Label className="block mt-2 mb-1">내용</Label>
+
+        <div className="page-body">
+          <Editor text={isCreate ? initText : selectedBoard?.content} />
+        </div>
+
+        <div className="flex justify-end gap-2 mt-4">
+          <TemplateButton
+            templates={templateList}
+            onSelectTemplate={applyTemplate}
+          />
           <Button
-            size="sm"
-            className="flex items-center gap-1"
-            onClick={() => navigate("./create")}
+            disabled={loading}
+            variant="destructive"
+            onClick={handleCancel}
           >
-            <PlusCircle className="w-4 h-4" />
-            작성
+            취소
+          </Button>
+          <Button
+            disabled={loading || text === init}
+            onClick={isEdit ? handleUpdate : handleCreate}
+          >
+            {isEdit ? "수정" : "저장"}
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (selectedBoard) {
+    return (
+      <div className="page-wrapper">
+        <CardHeader className="py-0 px-4">
+          <CardTitle className="text-2xl">{selectedBoard.title}</CardTitle>
+          <div className="text-sm text-muted-foreground">
+            작성자 {selectedBoard.authorName}
+          </div>
+        </CardHeader>
+        <div className="page-body">
+          <PreviewEditor editorState={selectedBoard.content} />
+        </div>
+        <div className="flex w-full items-center justify-between mt-4">
+          <Button
+            variant="ghost"
+            className="flex justify-start items-center gap-2"
+            onClick={backToReport}
+          >
+            <ChevronRight className="h-4 w-4 rotate-180" />
+            목록으로 돌아가기
+          </Button>
+          {userInfo?.pid === selectedBoard.authorId && (
+            <EditButton onClick={() => setIsEdit(true)}>수정</EditButton>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="page-wrapper">
+      <div className="h-4 flex items-center mb-4">
+        <Label className="text-xl font-bold">
+          {manageTemplate ? "템플릿 관리" : "가이드 모음"}
+        </Label>
+      </div>
+
+      <div className="page-body space-y-4">
+        {manageTemplate
+          ? templateList.map((manual) => (
+              <Card
+                key={manual.id}
+                className="hover:bg-gray-50 cursor-pointer p-4 flex justify-between"
+              >
+                <CardTitle className="text-lg">{manual.title}</CardTitle>
+                <button
+                  onClick={(event) => deleteBoardResource(manual.id, event)}
+                  className="text-gray-400 hover:text-red-500 transition-colors"
+                >
+                  <Trash2 size={20} />
+                </button>
+              </Card>
+            ))
+          : list.map((manual) => (
+              <Card
+                key={manual.id}
+                onClick={() => handleCardClick(manual.id)}
+                className="hover:bg-gray-50 cursor-pointer"
+              >
+                <CardHeader className="p-4">
+                  <div className="flex justify-between items-center">
+                    <CardTitle className="text-lg">{manual.title}</CardTitle>
+                    <button
+                      onClick={(event) => deleteBoardResource(manual.id, event)}
+                      className="text-gray-400 hover:text-red-500 transition-colors"
+                    >
+                      <Trash2 size={20} />
+                    </button>
+                  </div>
+                  <div className="w-full flex justify-end">
+                    <CardDescription className="text-sm text-gray-500">
+                      {new Date(manual.createdAt).toLocaleDateString()}{" "}
+                      {manual.authorName}
+                    </CardDescription>
+                  </div>
+                </CardHeader>
+              </Card>
+            ))}
+      </div>
+      {/* <MonthSelector
+          selectedDate={selectedDate}
+          setSelectedDate={setSelectedDate}
+        /> */}
+      <div className="flex justify-end items-center gap-4">
+        {manageTemplate ? (
+          <Button
+            variant="secondary"
+            onClick={() => {
+              setManageTemplate(false);
+            }}
+          >
+            게시물 보기
+          </Button>
+        ) : (
+          <Button
+            variant="secondary"
+            onClick={() => {
+              setManageTemplate(true);
+            }}
+          >
+            템플릿 관리하기
           </Button>
         )}
+        <Button onClick={handleClickCreate}>작성하기</Button>
       </div>
-
-      {/* 매뉴얼 리스트 */}
-      <div className="space-y-3">
-        {manuals.map((manual) => (
-          <Card
-            key={manual.id}
-            className="p-3 hover:bg-gray-50 cursor-pointer"
-            onClick={() => navigate(`./${manual.id}`)}
-          >
-            <div className="space-y-2">
-              <h2 className="font-medium text-base line-clamp-2">
-                {manual.title}
-              </h2>
-              <div className="flex justify-between text-sm text-gray-500">
-                <span>{manual.author}</span>
-                <span>{formatDate(manual.createdAt)}</span>
-              </div>
-            </div>
-          </Card>
-        ))}
-      </div>
-
-      {/* 데이터가 없을 때 표시 */}
-      {manuals.length === 0 && (
-        <div className="text-center py-8 text-gray-500">
-          등록된 매뉴얼이 없습니다.
-        </div>
-      )}
     </div>
   );
 };

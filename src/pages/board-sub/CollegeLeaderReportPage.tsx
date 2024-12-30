@@ -220,7 +220,6 @@ export const CollegeLeaderReportPage = ({
           attendances,
           newAttendances
         );
-        console.log(changedAttendances);
         if (changedAttendances.length > 0) {
           // 변경된 항목이 있는 경우만 API 호출
           await updateReport(changedAttendances);
@@ -338,7 +337,7 @@ export const CollegeLeaderReportPage = ({
           ))}
         </div>
       </div>
-      <div className="flex justify-between items-center mb-2">
+      <div className="flex justify-between items-center">
         <BogoSelect
           selectedDate={selectedDate}
           setSelectedDate={setSelectedDate}

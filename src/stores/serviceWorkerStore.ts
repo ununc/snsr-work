@@ -6,7 +6,7 @@ interface ServiceWorkerState {
   updateLater: () => void;
   checkForUpdates: () => Promise<void>;
   updateNow: () => Promise<void>;
-  initGetRegister: () => Promise<ServiceWorkerRegistration | undefined>;
+  initGetRegister: () => Promise<ServiceWorkerRegistration | undefined | null>;
 }
 
 export const useServiceWorkerStore = create<ServiceWorkerState>()(
@@ -62,7 +62,10 @@ export const useServiceWorkerStore = create<ServiceWorkerState>()(
     },
     initGetRegister: async () => {
       const { registration } = get();
-      if ("serviceWorker" in navigator && !registration) {
+      if (registration) {
+        return registration;
+      }
+      if ("serviceWorker" in navigator) {
         try {
           const register = await navigator.serviceWorker.getRegistration();
           set({ registration: register });
@@ -71,6 +74,7 @@ export const useServiceWorkerStore = create<ServiceWorkerState>()(
           set({ registration: null });
         }
       }
+      return null;
     },
   })
 );

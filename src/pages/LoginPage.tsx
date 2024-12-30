@@ -34,7 +34,8 @@ export const LoginPage = () => {
   };
 
   return (
-    <div className="w-full p-8 h-full flex flex-col justify-center">
+    <div className="w-full p-8 h-full flex flex-col justify-center relative">
+      <div className="absolute top-3 right-3 text-xs">v0.0.1</div>
       <form onSubmit={handleSubmit} className="mt-8 space-y-6">
         <div className="space-y-4">
           <div>

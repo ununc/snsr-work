@@ -10,8 +10,6 @@ import { NewsPage } from "@/pages/NewsPage";
 import { ManualPage } from "@/pages/board-sub/ManualPage";
 import { MonthlyReportPage } from "@/pages/board-sub/MonthlyReportPage";
 import { CollegeLeaderReportPage } from "@/pages/board-sub/CollegeLeaderReportPage";
-import { PraiseSheetPage } from "@/pages/board-sub/PraiseSheetPage";
-import { SpecialSongSheetPage } from "@/pages/board-sub/SpecialSongSheetPage";
 import { EventPlanPage } from "@/pages/board-sub/EventPlanPage";
 import { EventResultReportPage } from "@/pages/board-sub/EventResultReportPage";
 import { NewcomerIndividualReportPage } from "@/pages/board-sub/NewcomerIndividualReportPage";
@@ -21,8 +19,7 @@ import { AdvertisementRequestPage } from "@/pages/board-sub/AdvertisementRequest
 import { WorshipCommitteePage } from "@/pages/board-sub/WorshipCommitteePage";
 import { WorshipScriptPage } from "@/pages/board-sub/WorshipScriptPage";
 import { AttendanceReportPage } from "@/pages/board-sub/AttendanceReportPage";
-import { ManualCreatePage } from "@/pages/board-sub/ManualCreatePage";
-import { ManualContentPage } from "@/pages/board-sub/ManualContentPage";
+import { SongPage } from "@/pages/board-sub/SongPage";
 
 export const PathController = () => {
   return (
@@ -34,9 +31,7 @@ export const PathController = () => {
         <Route path="/calendar" element={<CalendarPage />} />
         <Route path="/address" element={<AddressPage />} />
         <Route path="/board">
-          <Route path="manual" element={<ManualPage />} />
-          <Route path="manual/:id" element={<ManualContentPage />} />
-          <Route path="manual/create" element={<ManualCreatePage />} />
+          <Route path="manual" element={<ManualPage boardId="manual" />} />
           <Route path="monthly-report" element={<MonthlyReportPage />} />
           <Route
             path="college-leader-report"
@@ -46,8 +41,11 @@ export const PathController = () => {
             path="youth-leader-report"
             element={<CollegeLeaderReportPage daechung={false} />}
           />
-          <Route path="praise-sheet" element={<PraiseSheetPage />} />
-          <Route path="special-song-sheet" element={<SpecialSongSheetPage />} />
+          <Route path="praise-sheet" element={<SongPage kind={true} />} />
+          <Route
+            path="special-song-sheet"
+            element={<SongPage kind={false} />}
+          />
           <Route path="event-plan" element={<EventPlanPage />} />
           <Route path="event-result" element={<EventResultReportPage />} />
           <Route

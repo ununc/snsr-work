@@ -2,6 +2,7 @@ import { useServiceWorkerStore } from "@/stores/serviceWorkerStore";
 
 export const UpdatePrompt = () => {
   const { updateLater, updateNow } = useServiceWorkerStore();
+
   return (
     <div className="absolute w-full -top-24">
       <div className="p-2 gap-2 flex flex-col justify-between items-center  border-2 rounded-lg border-blue-100">
