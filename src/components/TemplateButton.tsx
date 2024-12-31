@@ -27,7 +27,11 @@ export const TemplateButton = ({
           템플릿 사용
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-32 p-1.5 space-y-2" align="end">
+      <DropdownMenuContent
+        className="w-32 p-1.5 space-y-2"
+        align="end"
+        side="top"
+      >
         {templates.map((template) => (
           <DropdownMenuItem
             key={template.id}

@@ -8,18 +8,18 @@ import { SignUpPage } from "@/pages/SignUpPage";
 import { AccountLayout } from "@/layouts/AccountLayout";
 import { NewsPage } from "@/pages/NewsPage";
 import { ManualPage } from "@/pages/board-sub/ManualPage";
-import { MonthlyReportPage } from "@/pages/board-sub/MonthlyReportPage";
 import { CollegeLeaderReportPage } from "@/pages/board-sub/CollegeLeaderReportPage";
-import { EventPlanPage } from "@/pages/board-sub/EventPlanPage";
-import { EventResultReportPage } from "@/pages/board-sub/EventResultReportPage";
-import { NewcomerIndividualReportPage } from "@/pages/board-sub/NewcomerIndividualReportPage";
-import { NewcomerWeeklyReportPage } from "@/pages/board-sub/NewcomerWeeklyReportPage";
-import { PromotionReportPage } from "@/pages/board-sub/PromotionReportPage";
-import { AdvertisementRequestPage } from "@/pages/board-sub/AdvertisementRequestPage";
-import { WorshipCommitteePage } from "@/pages/board-sub/WorshipCommitteePage";
-import { WorshipScriptPage } from "@/pages/board-sub/WorshipScriptPage";
-import { AttendanceReportPage } from "@/pages/board-sub/AttendanceReportPage";
+// import { MonthlyReportPage } from "@/pages/board-sub/MonthlyReportPage";
+// import { EventPlanPage } from "@/pages/board-sub/EventPlanPage";
+// import { EventResultReportPage } from "@/pages/board-sub/EventResultReportPage";
+// import { NewcomerIndividualReportPage } from "@/pages/board-sub/NewcomerIndividualReportPage";
+// import { NewcomerWeeklyReportPage } from "@/pages/board-sub/NewcomerWeeklyReportPage";
+// import { PromotionReportPage } from "@/pages/board-sub/PromotionReportPage";
+// import { AdvertisementRequestPage } from "@/pages/board-sub/AdvertisementRequestPage";
+// import { WorshipCommitteePage } from "@/pages/board-sub/WorshipCommitteePage";
+// import { WorshipScriptPage } from "@/pages/board-sub/WorshipScriptPage";
 import { SongPage } from "@/pages/board-sub/SongPage";
+import { BoardPage } from "@/pages/BoardPage";
 
 export const PathController = () => {
   return (
@@ -32,7 +32,10 @@ export const PathController = () => {
         <Route path="/address" element={<AddressPage />} />
         <Route path="/board">
           <Route path="manual" element={<ManualPage boardId="manual" />} />
-          <Route path="monthly-report" element={<MonthlyReportPage />} />
+          <Route
+            path="monthly-report"
+            element={<BoardPage boardId="monthly-report" />}
+          />
           <Route
             path="college-leader-report"
             element={<CollegeLeaderReportPage daechung={true} />}
@@ -46,21 +49,38 @@ export const PathController = () => {
             path="special-song-sheet"
             element={<SongPage kind={false} />}
           />
-          <Route path="event-plan" element={<EventPlanPage />} />
-          <Route path="event-result" element={<EventResultReportPage />} />
+          <Route
+            path="event-plan"
+            element={<BoardPage boardId="event-plan" />}
+          />
+          <Route
+            path="event-result"
+            element={<BoardPage boardId="event-result" />}
+          />
           <Route
             path="newcomer-individual"
-            element={<NewcomerIndividualReportPage />}
+            element={<BoardPage boardId="newcomer-individual" />}
           />
           <Route
             path="newcomer-weekly"
-            element={<NewcomerWeeklyReportPage />}
+            element={<BoardPage boardId="newcomer-weekly" />}
           />
-          <Route path="promotion-report" element={<PromotionReportPage />} />
-          <Route path="advertisement" element={<AdvertisementRequestPage />} />
-          <Route path="worship-committee" element={<WorshipCommitteePage />} />
-          <Route path="worship-script" element={<WorshipScriptPage />} />
-          <Route path="attendance" element={<AttendanceReportPage />} />
+          <Route
+            path="promotion-report"
+            element={<BoardPage boardId="promotion-report" />}
+          />
+          <Route
+            path="advertisement"
+            element={<BoardPage boardId="advertisement" />}
+          />
+          <Route
+            path="worship-committee"
+            element={<BoardPage boardId="worship-committee" />}
+          />
+          <Route
+            path="worship-script"
+            element={<BoardPage boardId="worship-script" />}
+          />
         </Route>
       </Route>
       <Route path="/account" element={<AccountLayout />}>

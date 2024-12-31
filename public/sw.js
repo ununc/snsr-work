@@ -345,20 +345,32 @@ const sendSubscriptionToServer = async (subscription, action = "subscribe") => {
 
 // Push 구독 변경 처리
 self.addEventListener("pushsubscriptionchange", function (event) {
+  const subscribeOptions = {
+    applicationServerKey: pushKey,
+    userVisibleOnly: true,
+  };
+
   event.waitUntil(
-    // 새로운 구독 정보 생성
-    self.registration.pushManager
-      .subscribe({
-        applicationServerKey: pushKey,
-        userVisibleOnly: true,
-      })
-      .then(function (subscription) {
-        // 서버에 새로운 구독 정보 전송
-        return sendSubscriptionToServer(subscription, "subscribe");
-      })
-      .catch((error) => {
-        console.error("Error during service worker unregistration:", error);
-      })
+    (async () => {
+      try {
+        // 기존 구독 확인 및 취소
+        const oldSubscription =
+          await self.registration.pushManager.getSubscription();
+        if (oldSubscription) {
+          await sendSubscriptionToServer(oldSubscription, "unsubscribe");
+          await oldSubscription.unsubscribe();
+        }
+
+        // 새로운 구독 생성
+        const newSubscription = await self.registration.pushManager.subscribe(
+          subscribeOptions
+        );
+        await sendSubscriptionToServer(newSubscription, "subscribe");
+      } catch (error) {
+        console.error("Subscription change failed:", error);
+        // 사용자에게 재구독이 필요하다는 메시지를 보낼 수 있음
+      }
+    })()
   );
 });
 /*
@@ -375,18 +387,34 @@ self.addEventListener("pushsubscriptionchange", function (event) {
 */
 
 // 서비스 워커 등록 해제시
-self.addEventListener("unregister", async function () {
-  try {
-    const subscription = await self.registration.pushManager.getSubscription();
-    if (subscription) {
-      // 서버에 구독 취소 알림
-      await sendSubscriptionToServer(subscription, "unsubscribe");
-      // 구독 취소
-      await subscription.unsubscribe();
-    }
-  } catch (error) {
-    console.error("Error during service worker unregistration:", error);
-  }
+self.addEventListener("unregister", async function (event) {
+  event.waitUntil(
+    (async () => {
+      try {
+        const subscription =
+          await self.registration.pushManager.getSubscription();
+        if (subscription) {
+          // 구독 취소 전에 서버에 알림
+          await sendSubscriptionToServer(subscription, "unsubscribe");
+
+          // 구독 취소 시도
+          const unsubscribed = await subscription.unsubscribe();
+          if (!unsubscribed) {
+            throw new Error("Unsubscribe failed");
+          }
+
+          // 서비스 워커 등록 취소
+          const unregistered = await self.registration.unregister();
+          if (!unregistered) {
+            throw new Error("Unregister failed");
+          }
+        }
+      } catch (error) {
+        console.error("Unregistration process failed:", error);
+        // 에러 발생 시 재시도 로직을 추가할 수 있습니다
+      }
+    })()
+  );
 });
 /*
 생 시점:

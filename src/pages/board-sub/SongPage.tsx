@@ -323,7 +323,7 @@ export const SongPage = ({ kind }: { kind: boolean }) => {
         </Label>
       </div>
       <div className="page-body">
-        <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3">
+        <div className="space-y-2">
           {songList.map((song) => (
             <Card
               key={song.id}

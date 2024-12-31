@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/popover";
 
 interface MonthSelectorProps {
+  width?: string;
   selectedDate: string | null;
   setSelectedDate: (date: string) => void;
 }
@@ -22,6 +23,7 @@ const formatDate = (dateStr: string | null): string => {
 export const MonthSelector: React.FC<MonthSelectorProps> = ({
   selectedDate,
   setSelectedDate,
+  width = "w-40",
 }) => {
   const [dates, setDates] = useState<string[]>([]);
   const [open, setOpen] = useState(false);
@@ -75,12 +77,12 @@ export const MonthSelector: React.FC<MonthSelectorProps> = ({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant="outline" className="w-40">
+        <Button variant="outline" className={width}>
           {formatDate(selectedDate)}
         </Button>
       </PopoverTrigger>
 
-      <PopoverContent className="w-40 p-0" align="start">
+      <PopoverContent className={width + " p-0"} align="start">
         <div className="flex flex-col items-center">
           <Button
             variant="ghost"

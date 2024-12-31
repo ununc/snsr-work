@@ -12,7 +12,6 @@ import { EditButton } from "@/components/EditButton";
 import { Editor } from "@/components/editor/Editor";
 import { PreviewEditor } from "@/components/editor/Preview";
 import { TemplateButton } from "@/components/TemplateButton";
-// import { MonthSelector } from "@/components/SongDateSelect";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -31,13 +30,6 @@ import { ChangeEvent, useEffect, useState } from "react";
 const init = `{"root":{"children":[{"children":[],"direction":null,"format":"","indent":0,"type":"paragraph","version":1,"textFormat":0,"textStyle":""}],"direction":null,"format":"","indent":0,"type":"root","version":1}}`;
 
 export const ManualPage = ({ boardId }: { boardId: string }) => {
-  // const [selectedDate, setSelectedDate] = useState<string | null>(() => {
-  //   const now = new Date();
-  //   return `${now.getFullYear().toString()}-${(now.getMonth() + 1)
-  //     .toString()
-  //     .padStart(2, "0")}`;
-  // });
-
   const [isCreate, setIsCreate] = useState<boolean>(false);
   const [isEdit, setIsEdit] = useState<boolean>(false);
   const [list, setList] = useState<ResponseBoardDto[]>([]);
@@ -55,7 +47,6 @@ export const ManualPage = ({ boardId }: { boardId: string }) => {
     null
   );
 
-  //
   const [title, setTitle] = useState("");
   const [loading, setLoading] = useState(false);
   const [isTemplate, setIsTemplate] = useState(false);
@@ -113,15 +104,17 @@ export const ManualPage = ({ boardId }: { boardId: string }) => {
   };
 
   const handleCancel = () => {
-    setSelectedBoard((prev) => {
-      if (prev) {
-        return {
-          ...prev,
-          content: initText,
-        };
-      }
-      return null;
-    });
+    if (initText) {
+      setSelectedBoard((prev) => {
+        if (prev) {
+          return {
+            ...prev,
+            content: initText,
+          };
+        }
+        return null;
+      });
+    }
     setIsCreate(false);
     setIsEdit(false);
     setTitle("");
@@ -134,7 +127,6 @@ export const ManualPage = ({ boardId }: { boardId: string }) => {
   const applyTemplate = async (item: string) => {
     const board = await getBoard(item);
     const result = objectNameList(board.content);
-    // 나중에 수정 시 list 비교하여 새로운 것만 추가 및 없어진 objectName 제거 요청
 
     const imageUrls: string[] = await Promise.all(
       result.map((path) => getDownloadUrl(path))
@@ -173,7 +165,6 @@ export const ManualPage = ({ boardId }: { boardId: string }) => {
   const handleCardClick = async (id: string) => {
     const board = await getBoard(id);
     const result = objectNameList(board.content);
-    // 나중에 수정 시 list 비교하여 새로운 것만 추가 및 없어진 objectName 제거 요청
 
     const imageUrls: string[] = await Promise.all(
       result.map((path) => getDownloadUrl(path))
@@ -346,7 +337,7 @@ export const ManualPage = ({ boardId }: { boardId: string }) => {
     <div className="page-wrapper">
       <div className="h-4 flex items-center mb-4">
         <Label className="text-xl font-bold">
-          {manageTemplate ? "템플릿 관리" : "가이드 모음"}
+          {manageTemplate ? "템플릿 관리" : "메뉴얼 모음"}
         </Label>
       </div>
 
@@ -358,12 +349,14 @@ export const ManualPage = ({ boardId }: { boardId: string }) => {
                 className="hover:bg-gray-50 cursor-pointer p-4 flex justify-between"
               >
                 <CardTitle className="text-lg">{manual.title}</CardTitle>
-                <button
-                  onClick={(event) => deleteBoardResource(manual.id, event)}
-                  className="text-gray-400 hover:text-red-500 transition-colors"
-                >
-                  <Trash2 size={20} />
-                </button>
+                {userInfo?.pid === manual.authorId && (
+                  <button
+                    onClick={(event) => deleteBoardResource(manual.id, event)}
+                    className="text-gray-400 hover:text-red-500 transition-colors"
+                  >
+                    <Trash2 size={20} />
+                  </button>
+                )}
               </Card>
             ))
           : list.map((manual) => (
@@ -375,12 +368,16 @@ export const ManualPage = ({ boardId }: { boardId: string }) => {
                 <CardHeader className="p-4">
                   <div className="flex justify-between items-center">
                     <CardTitle className="text-lg">{manual.title}</CardTitle>
-                    <button
-                      onClick={(event) => deleteBoardResource(manual.id, event)}
-                      className="text-gray-400 hover:text-red-500 transition-colors"
-                    >
-                      <Trash2 size={20} />
-                    </button>
+                    {userInfo?.pid === manual.authorId && (
+                      <button
+                        onClick={(event) =>
+                          deleteBoardResource(manual.id, event)
+                        }
+                        className="text-gray-400 hover:text-red-500 transition-colors"
+                      >
+                        <Trash2 size={20} />
+                      </button>
+                    )}
                   </div>
                   <div className="w-full flex justify-end">
                     <CardDescription className="text-sm text-gray-500">
@@ -392,10 +389,6 @@ export const ManualPage = ({ boardId }: { boardId: string }) => {
               </Card>
             ))}
       </div>
-      {/* <MonthSelector
-          selectedDate={selectedDate}
-          setSelectedDate={setSelectedDate}
-        /> */}
       <div className="flex justify-end items-center gap-4">
         {manageTemplate ? (
           <Button
@@ -413,7 +406,7 @@ export const ManualPage = ({ boardId }: { boardId: string }) => {
               setManageTemplate(true);
             }}
           >
-            템플릿 관리하기
+            템플릿 관리
           </Button>
         )}
         <Button onClick={handleClickCreate}>작성하기</Button>

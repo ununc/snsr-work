@@ -15,10 +15,19 @@ export interface ResponseBoardDto {
   id: string;
   createdAt: string;
   isTemplate: boolean;
+  authorId: string;
 }
 
 export interface BoardAllFiled extends CreateBoardDto, ResponseBoardDto {
   modifierId?: string;
+}
+
+export interface PagiReponse {
+  items: ResponseBoardDto[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
 }
 
 export const createBoard = async (payload: CreateBoardDto): Promise<void> => {
@@ -56,6 +65,33 @@ export const deleteBoard = async (
   const { data } = await apiClient.delete(`boards/${id}`, {
     params: {
       userId,
+    },
+  });
+  return data;
+};
+
+// 전체 보드의 템플릿 요청
+export const getBoardTemplates = async (
+  boardId: string
+): Promise<ResponseBoardDto[]> => {
+  const { data } = await apiClient.get("boards/temp", {
+    params: {
+      boardId,
+    },
+  });
+  return data;
+};
+
+// 해당 월의 보드 요청
+export const getBoardsSplit = async (
+  boardId: string,
+  page: number,
+  limit: number
+): Promise<PagiReponse> => {
+  const { data } = await apiClient.get(`boards/split/${boardId}`, {
+    params: {
+      page,
+      limit,
     },
   });
   return data;
