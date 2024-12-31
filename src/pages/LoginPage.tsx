@@ -27,15 +27,14 @@ export const LoginPage = () => {
       userInfo.menuList = menuList;
 
       setUserData(userInfo, access_token, autoLogin);
-      navigate("/news");
+      navigate("/calendar");
     } catch {
       alert("로그인에 실패했습니다.");
     }
   };
 
   return (
-    <div className="w-full p-8 h-full flex flex-col justify-center relative">
-      <div className="absolute top-3 right-3 text-xs">v0.0.1</div>
+    <div className="w-full p-8 h-full flex flex-col justify-center">
       <form onSubmit={handleSubmit} className="mt-8 space-y-6">
         <div className="space-y-4">
           <div>

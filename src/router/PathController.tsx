@@ -9,22 +9,13 @@ import { AccountLayout } from "@/layouts/AccountLayout";
 import { NewsPage } from "@/pages/NewsPage";
 import { ManualPage } from "@/pages/board-sub/ManualPage";
 import { CollegeLeaderReportPage } from "@/pages/board-sub/CollegeLeaderReportPage";
-// import { MonthlyReportPage } from "@/pages/board-sub/MonthlyReportPage";
-// import { EventPlanPage } from "@/pages/board-sub/EventPlanPage";
-// import { EventResultReportPage } from "@/pages/board-sub/EventResultReportPage";
-// import { NewcomerIndividualReportPage } from "@/pages/board-sub/NewcomerIndividualReportPage";
-// import { NewcomerWeeklyReportPage } from "@/pages/board-sub/NewcomerWeeklyReportPage";
-// import { PromotionReportPage } from "@/pages/board-sub/PromotionReportPage";
-// import { AdvertisementRequestPage } from "@/pages/board-sub/AdvertisementRequestPage";
-// import { WorshipCommitteePage } from "@/pages/board-sub/WorshipCommitteePage";
-// import { WorshipScriptPage } from "@/pages/board-sub/WorshipScriptPage";
 import { SongPage } from "@/pages/board-sub/SongPage";
 import { BoardPage } from "@/pages/BoardPage";
 
 export const PathController = () => {
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="/news" replace />} />
+      <Route path="/" element={<Navigate to="/calendar" replace />} />
       <Route element={<ProtectedRoute />}>
         <Route path="/news" element={<NewsPage />} />
         <Route path="/programme" element={<ProgrammePage />} />
@@ -87,7 +78,7 @@ export const PathController = () => {
         <Route path="login" element={<LoginPage />} />
         <Route path="signin" element={<SignUpPage />} />
       </Route>
-      <Route path="*" element={<Navigate to="/news" replace />} />
+      <Route path="*" element={<Navigate to="/calendar" replace />} />
     </Routes>
   );
 };

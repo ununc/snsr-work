@@ -13,6 +13,35 @@ interface SignUpForm {
   daechung: string;
 }
 
+const members = {
+  c: [
+    "이승태",
+    "박은비",
+    "박진유",
+    "박정경",
+    "배성광",
+    "이예지",
+    "이주헌",
+    "전도영",
+    "정창대",
+    "허예인",
+    "새가족",
+  ],
+  y: [
+    "김민경",
+    "강성전",
+    "김정민",
+    "신현교",
+    "염기현",
+    "최우형",
+    "고아라",
+    "김윤주",
+    "서한솔",
+    "주효민",
+    "새가족",
+  ],
+};
+
 export const SignUpPage = () => {
   const [formData, setFormData] = useState<SignUpForm>({
     id: "",
@@ -87,36 +116,37 @@ export const SignUpPage = () => {
               className="mt-1 block w-full rounded-md border border-gray-300 p-2"
             />
           </div>
-
-          <div>
-            <label htmlFor="name" className="block text-sm font-medium">
-              이름
-            </label>
-            <input
-              id="name"
-              name="name"
-              type="text"
-              required
-              value={formData.name}
-              onChange={handleChange}
-              className="mt-1 block w-full rounded-md border border-gray-300 p-2"
-            />
+          <div className="flex gap-3">
+            <div>
+              <label htmlFor="name" className="block text-sm font-medium">
+                이름
+              </label>
+              <input
+                id="name"
+                name="name"
+                type="text"
+                required
+                value={formData.name}
+                onChange={handleChange}
+                className="mt-1 block w-full rounded-md border border-gray-300 p-2"
+              />
+            </div>
+            <div>
+              <label htmlFor="phone" className="block text-sm font-medium">
+                전화번호
+              </label>
+              <input
+                id="phone"
+                name="phone"
+                type="tel"
+                required
+                value={formData.phone}
+                onChange={handleChange}
+                className="mt-1 block w-full rounded-md border border-gray-300 p-2"
+              />
+            </div>
           </div>
-          <div>
-            <label htmlFor="phone" className="block text-sm font-medium">
-              전화번호
-            </label>
-            <input
-              id="phone"
-              name="phone"
-              type="tel"
-              required
-              value={formData.phone}
-              onChange={handleChange}
-              className="mt-1 block w-full rounded-md border border-gray-300 p-2"
-            />
-          </div>
-          <div>
+          {/* <div>
             <label htmlFor="email" className="block text-sm font-medium">
               이메일 (선택)
             </label>
@@ -128,35 +158,9 @@ export const SignUpPage = () => {
               onChange={handleChange}
               className="mt-1 block w-full rounded-md border border-gray-300 p-2"
             />
-          </div>
+          </div> */}
 
-          <div className="mt-2 space-x-4">
-            <label className="inline-flex items-center">
-              <input
-                type="radio"
-                name="daechung"
-                value="대학부"
-                checked={formData.daechung === "대학부"}
-                onChange={handleChange}
-                className="mr-2"
-              />
-              <span>대학부</span>
-            </label>
-            <label className="inline-flex items-center">
-              <input
-                type="radio"
-                name="daechung"
-                value="청년부"
-                checked={formData.daechung === "청년부"}
-                onChange={handleChange}
-                className="mr-2"
-              />
-              <span>청년부</span>
-            </label>
-          </div>
-        </div>
-        <div className="flex justify-between gap-4">
-          <div className="w-1/2">
+          <div className="w-full">
             <label htmlFor="birth" className="block text-sm font-medium">
               생년월일
             </label>
@@ -170,23 +174,54 @@ export const SignUpPage = () => {
               className="mt-1 block w-full rounded-md border border-gray-300 p-2"
             />
           </div>
-          <div className="w-1/2">
-            <label htmlFor="sarang" className="block text-sm font-medium">
-              사랑방
-            </label>
-            <select
-              id="sarang"
-              name="sarang"
-              required
-              value={formData.sarang}
-              onChange={handleChange}
-              className="mt-1 block w-full rounded-md border border-gray-300 p-2"
-            >
-              <option value="">선택하세요</option>
-              <option value="1">1사랑방</option>
-              <option value="2">2사랑방</option>
-              <option value="3">3사랑방</option>
-            </select>
+          <div className="flex justify-between items-center gap-4">
+            <div className="w-1/2 space-x-4">
+              <label className="inline-flex items-center">
+                <input
+                  type="radio"
+                  name="daechung"
+                  value="대학부"
+                  checked={formData.daechung === "대학부"}
+                  onChange={handleChange}
+                  className="mr-2"
+                />
+                <span>대학부</span>
+              </label>
+              <label className="inline-flex items-center">
+                <input
+                  type="radio"
+                  name="daechung"
+                  value="청년부"
+                  checked={formData.daechung === "청년부"}
+                  onChange={handleChange}
+                  className="mr-2"
+                />
+                <span>청년부</span>
+              </label>
+            </div>
+            <div className="w-1/2">
+              <select
+                id="sarang"
+                name="sarang"
+                required
+                value={formData.sarang}
+                onChange={handleChange}
+                className="mt-1 block w-full h-11 rounded-md border border-gray-300 p-2"
+              >
+                <option value="">사랑방을 선택하세요</option>
+                {formData.daechung === "청년부"
+                  ? members.y.map((name) => (
+                      <option key={name} value={name}>
+                        {name} 사랑방
+                      </option>
+                    ))
+                  : members.c.map((name) => (
+                      <option key={name} value={name}>
+                        {name} 사랑방
+                      </option>
+                    ))}
+              </select>
+            </div>
           </div>
         </div>
 

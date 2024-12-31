@@ -52,7 +52,8 @@ export const AddressPage = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const { userInfo, autoLogin, clearUserData } = useGlobalStore();
-  const { checkForUpdates } = useServiceWorkerStore();
+  const { checkForUpdates, startProcess, checkProcess } =
+    useServiceWorkerStore();
   useEffect(() => {
     const getAddresses = async () => {
       try {
@@ -119,6 +120,7 @@ export const AddressPage = () => {
   };
 
   const checkUpdate = async () => {
+    startProcess();
     await checkForUpdates();
   };
 
@@ -157,9 +159,11 @@ export const AddressPage = () => {
                 {userInfo?.email || "이메일 없음"}
               </CardDescription>
             </div>
-            <button onClick={checkUpdate} className="absolute top-6 right-6">
-              <RefreshCcw className="w-5 h-5" />
-            </button>
+            {!checkProcess && (
+              <button onClick={checkUpdate} className="absolute top-6 right-6">
+                <RefreshCcw className="w-5 h-5" />
+              </button>
+            )}
           </div>
           <CardContent>
             <div className="space-y-4">
