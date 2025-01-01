@@ -39,6 +39,11 @@ export const autoLogin = async (): Promise<boolean> => {
   return data.isValid;
 };
 
+export const getNewRoleMenu = async (pid: string) => {
+  const { data } = await apiClient.get(`auth/role-menu/${pid}`);
+  return data;
+};
+
 export const getAdress = async ({
   daechung,
   sarang,
@@ -53,4 +58,17 @@ export const getAdress = async ({
     },
   });
   return data;
+};
+
+export const updateRequestUserInfo = async (payload: {
+  [key: string]: string | Date | boolean;
+}) => {
+  const { data } = await apiClient.patch("auth/update-user-info", payload);
+  return data;
+};
+
+export const passwordChange = async (payload: {
+  [key: string]: string | Date | boolean;
+}) => {
+  await apiClient.patch("auth/change-password", payload);
 };

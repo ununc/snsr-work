@@ -21,12 +21,12 @@ import { useGlobalStore } from "@/stores/global.store";
 
 export const BottomNav = () => {
   const navigate = useNavigate();
-  const { userInfo } = useGlobalStore();
+  const { menuList } = useGlobalStore();
   const { showUpdatePrompt, initGetRegister } = useServiceWorkerStore();
 
-  const parentItems = userInfo?.menuList?.filter((item) => !item.owner);
+  const parentItems = menuList?.filter((item) => !item.owner);
   const getChildItems = (parentId: string) => {
-    return userInfo?.menuList
+    return menuList
       ?.filter((item) => item.owner === parentId)
       .sort((a, b) => a.order - b.order);
   };
@@ -36,9 +36,7 @@ export const BottomNav = () => {
   };
 
   useEffect(() => {
-    if ("serviceWorker" in navigator) {
-      initGetRegister();
-    }
+    initGetRegister();
   }, []);
 
   return (

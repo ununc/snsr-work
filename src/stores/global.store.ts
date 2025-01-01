@@ -8,23 +8,42 @@ interface UserInfo {
   daechung: boolean;
   created_at: Date;
   role_list: { name: string; id: string }[];
-  menuList: {
-    id: string;
-    name: string;
-    description: string;
-    order: number;
-    owner: string;
-    can_write: boolean;
-  }[];
+
   autoLogin: boolean;
+}
+
+interface Menu {
+  id: string;
+  name: string;
+  description: string;
+  order: number;
+  owner: string;
+  can_write: boolean;
+}
+
+interface Role {
+  id: string;
+  name: string;
 }
 
 interface UserState {
   userInfo: UserInfo | null;
+  menuList: Menu[] | null;
+  roleNames: Role[] | null;
   token: string | null;
   autoLogin: boolean;
-  setUserData: (userInfo: UserInfo, token: string, autoLogin: boolean) => void;
-  updateUserInfo: (newUserInfo: Partial<UserInfo>) => void;
+  setUserData: (
+    userInfo: UserInfo,
+    menuList: Menu[],
+    roleNames: Role[],
+    token: string,
+    autoLogin: boolean
+  ) => void;
+  updateUserInfo: (newUserInfo: UserInfo) => void;
+  updateMenuList: (newMenuList: Menu[]) => void;
+  updateRoleNames: (newRoleNames: Role[]) => void;
+  updateToken: (newToken: string) => void;
+  updateAutoLogin: (newAutoLogin: boolean) => void;
   clearUserData: () => void;
 }
 
@@ -98,30 +117,57 @@ export const useGlobalStore = create<UserState>()(
   persist(
     (set) => ({
       userInfo: null,
+      menuList: null,
+      roleNames: null,
       token: null,
       autoLogin: false,
 
-      setUserData: (userInfo: UserInfo, token: string, autoLogin: boolean) =>
-        set({ userInfo, token, autoLogin }),
+      setUserData: (
+        userInfo: UserInfo,
+        menuList: Menu[],
+        roleNames: Role[],
+        token: string,
+        autoLogin: boolean
+      ) => set({ userInfo, menuList, roleNames, token, autoLogin }),
 
-      updateUserInfo: (newUserInfo: Partial<UserInfo>) =>
-        set((state) => ({
-          userInfo: state.userInfo
-            ? ({ ...state.userInfo, ...newUserInfo } as UserInfo)
-            : null,
-        })),
+      updateUserInfo: (newUserInfo: UserInfo) => set({ userInfo: newUserInfo }),
+      updateMenuList: (newMenuList: Menu[]) => set({ menuList: newMenuList }),
 
+      updateRoleNames: (newRoleNames: Role[]) =>
+        set({ roleNames: newRoleNames }),
+
+      updateToken: (newToken: string) => set({ token: newToken }),
+
+      updateAutoLogin: (newAutoLogin: boolean) =>
+        set({ autoLogin: newAutoLogin }),
       clearUserData: () =>
-        set({ userInfo: null, token: null, autoLogin: false }),
+        set({
+          userInfo: null,
+          menuList: null,
+          roleNames: null,
+          token: null,
+          autoLogin: false,
+        }),
     }),
     {
       name: "user-storage",
       storage: createJSONStorage(() => storage),
-      partialize: (state) => ({
-        userInfo: state.userInfo,
-        token: state.token,
-        autoLogin: state.autoLogin,
-      }),
+      partialize: (state) =>
+        state.autoLogin
+          ? {
+              userInfo: state.userInfo,
+              menuList: state.menuList,
+              roleNames: state.roleNames,
+              token: state.token,
+              autoLogin: state.autoLogin,
+            }
+          : {
+              userInfo: null,
+              menuList: null,
+              roleNames: null,
+              token: null,
+              autoLogin: false,
+            },
     }
   )
 );

@@ -23,10 +23,11 @@ export const LoginPage = () => {
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     try {
-      const { userInfo, menuList, access_token } = await login(credentials);
-      userInfo.menuList = menuList;
+      const { userInfo, menuList, roleNames, access_token } = await login(
+        credentials
+      );
 
-      setUserData(userInfo, access_token, autoLogin);
+      setUserData(userInfo, menuList, roleNames, access_token, autoLogin);
       navigate("/calendar");
     } catch {
       alert("로그인에 실패했습니다.");

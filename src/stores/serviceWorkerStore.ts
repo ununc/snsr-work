@@ -3,8 +3,6 @@ import { create } from "zustand";
 interface ServiceWorkerState {
   registration: ServiceWorkerRegistration | null;
   showUpdatePrompt: boolean;
-  checkProcess: boolean;
-  startProcess: () => void;
   updateLater: () => void;
   checkForUpdates: () => Promise<void>;
   updateNow: () => Promise<void>;
@@ -15,10 +13,8 @@ export const useServiceWorkerStore = create<ServiceWorkerState>()(
   (set, get) => ({
     registration: null,
     showUpdatePrompt: false,
-    checkProcess: false,
 
     updateLater: () => set({ showUpdatePrompt: false }),
-    startProcess: () => set({ checkProcess: true }),
     checkForUpdates: async () => {
       const { registration } = get();
       if (registration) {
@@ -49,8 +45,6 @@ export const useServiceWorkerStore = create<ServiceWorkerState>()(
           set({ showUpdatePrompt: registration.waiting ? true : false });
         } catch (error) {
           console.error("Error checking for updates:", error);
-        } finally {
-          set({ checkProcess: false });
         }
       }
     },

@@ -1,6 +1,11 @@
-import { getAdress } from "@/apis/auth/login";
+import {
+  getAdress,
+  getNewRoleMenu,
+  passwordChange,
+  updateRequestUserInfo,
+} from "@/apis/auth/login";
 import { Label } from "@/components/ui/label";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Card,
   CardContent,
@@ -14,13 +19,24 @@ import {
   UserCircle,
   Mail,
   ChevronRight,
-  RefreshCcw,
+  Pencil,
+  RefreshCw,
+  Download,
+  Calendar,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useGlobalStore } from "@/stores/global.store";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { useServiceWorkerStore } from "@/stores/serviceWorkerStore";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { members } from "@/etc/sarangbang";
 
 interface Contact {
   role: string;
@@ -49,11 +65,31 @@ export const AddressPage = () => {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [myPage, setMyPage] = useState(false);
+  const [isEdit, setIsEdit] = useState(false);
+
+  const [editInfo, setEditInfo] = useState({
+    email: "",
+    phone: "",
+    birth: new Date(),
+    sarang: "",
+    daechung: "대학부",
+  });
+  const [oldPassword, setOldPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { userInfo, autoLogin, clearUserData } = useGlobalStore();
-  const { checkForUpdates, startProcess, checkProcess } =
-    useServiceWorkerStore();
+  const {
+    userInfo,
+    menuList,
+    roleNames,
+    autoLogin,
+    clearUserData,
+    updateMenuList,
+    updateRoleNames,
+    updateUserInfo,
+  } = useGlobalStore();
+  const { checkForUpdates } = useServiceWorkerStore();
   useEffect(() => {
     const getAddresses = async () => {
       try {
@@ -89,6 +125,14 @@ export const AddressPage = () => {
     getAddresses();
   }, []);
 
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const handleIconClick = () => {
+    // 아이콘 클릭시 숨겨진 input의 달력을 엽니다
+    if (inputRef.current) {
+      inputRef.current.showPicker();
+    }
+  };
   const copyToClipboard = async (text: string, type: string) => {
     try {
       await navigator.clipboard.writeText(text);
@@ -120,8 +164,52 @@ export const AddressPage = () => {
   };
 
   const checkUpdate = async () => {
-    startProcess();
     await checkForUpdates();
+  };
+
+  const handleEdit = () => {
+    setEditInfo({
+      email: userInfo?.email ?? "",
+      phone: userInfo?.phone ?? "",
+      birth: new Date(userInfo?.birth ?? ""),
+      sarang: userInfo?.sarang ?? "",
+      daechung: userInfo?.daechung ? "대학부" : "청년부",
+    });
+    setNewPassword("");
+    setOldPassword("");
+    setIsEdit(true);
+  };
+
+  const handleChange = (field: string, value: string | boolean | Date) => {
+    setEditInfo((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  // 폼 제출 핸들러
+  const handleSubmit = async () => {
+    const data = await updateRequestUserInfo({
+      ...editInfo,
+      pid: userInfo?.pid ?? "",
+      daechung: editInfo.daechung === "대학부",
+    });
+    updateUserInfo(data);
+    setIsEdit(false);
+  };
+
+  const handleChangePass = async () => {
+    await passwordChange({
+      oldPassword,
+      newPassword,
+    });
+    handleLogout();
+  };
+
+  const roleMenuUpdate = async () => {
+    const data = await getNewRoleMenu(userInfo?.pid ?? "");
+    updateMenuList(data.menuList);
+    updateRoleNames(data.roleNames);
   };
 
   if (error) {
@@ -136,6 +224,133 @@ export const AddressPage = () => {
     return (
       <div className="flex justify-center items-center h-32 text-muted-foreground">
         등록된 연락처가 없습니다.
+      </div>
+    );
+  }
+
+  if (isEdit) {
+    return (
+      <div className="page-wrapper">
+        <div className="page-body px-2 space-y-2">
+          <Label htmlFor="email">이메일</Label>
+          <Input
+            id="email"
+            type="email"
+            value={editInfo.email}
+            onChange={(e) => handleChange("email", e.target.value)}
+          />
+
+          <Label htmlFor="phone">전화번호</Label>
+          <Input
+            id="phone"
+            type="tel"
+            value={editInfo.phone}
+            onChange={(e) => handleChange("phone", e.target.value)}
+          />
+
+          <Label htmlFor="birth">생년월일</Label>
+          <div className="flex items-center justify-between">
+            <div>{editInfo.birth.toLocaleDateString()}</div>
+            <div className="relative">
+              <Input
+                ref={inputRef}
+                id="birth"
+                type="date"
+                className="w-0 h-0 opacity-0 absolute"
+                onChange={(e) =>
+                  handleChange("birth", new Date(e.target.value))
+                }
+              />
+              <button
+                type="button"
+                onClick={handleIconClick}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <Calendar className="w-5 h-5 text-gray-600" />
+              </button>
+            </div>
+          </div>
+
+          <div className="flex justify-between items-center gap-4">
+            <div className="w-1/2 space-x-4">
+              <label className="inline-flex items-center">
+                <input
+                  type="radio"
+                  name="daechung"
+                  value="대학부"
+                  checked={editInfo.daechung === "대학부"}
+                  onChange={(e) => handleChange("daechung", e.target.value)}
+                  className="mr-2"
+                />
+                <span>대학부</span>
+              </label>
+              <label className="inline-flex items-center">
+                <input
+                  type="radio"
+                  name="daechung"
+                  value="청년부"
+                  checked={editInfo.daechung === "청년부"}
+                  onChange={(e) => handleChange("daechung", e.target.value)}
+                  className="mr-2"
+                />
+                <span>청년부</span>
+              </label>
+            </div>
+            <div className="w-1/2">
+              <select
+                name="sarang"
+                value={editInfo.sarang}
+                onChange={(e) => handleChange("sarang", e.target.value)}
+                className="mt-1 block w-full h-11 rounded-md border border-gray-300 p-2"
+              >
+                <option value="">사랑방을 선택하세요</option>
+                {editInfo.daechung === "청년부"
+                  ? members.y.map((name) => (
+                      <option key={name} value={name}>
+                        {name} 사랑방
+                      </option>
+                    ))
+                  : members.c.map((name) => (
+                      <option key={name} value={name}>
+                        {name} 사랑방
+                      </option>
+                    ))}
+              </select>
+            </div>
+          </div>
+
+          <Button type="submit" className="w-full" onClick={handleSubmit}>
+            정보 수정하기
+          </Button>
+
+          <div className="space-y-2 pt-4">
+            <Label className="block mb-2">비밀번호 변경</Label>
+            <Label>기존 비밀번호</Label>
+
+            <Input
+              type="password"
+              value={oldPassword}
+              onChange={(e) => setOldPassword(e.target.value)}
+            />
+            <Label>새 비밀번호</Label>
+            <Input
+              type="password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+            />
+            <Button type="submit" className="w-full" onClick={handleChangePass}>
+              비밀 번호 수정하기
+            </Button>
+          </div>
+        </div>
+
+        <Button
+          variant="ghost"
+          className="w-full flex justify-start mt-4 items-center gap-2"
+          onClick={() => setIsEdit(false)}
+        >
+          <ChevronRight className="h-4 w-4 rotate-180" />내 정보로 돌아가기
+        </Button>
       </div>
     );
   }
@@ -159,11 +374,35 @@ export const AddressPage = () => {
                 {userInfo?.email || "이메일 없음"}
               </CardDescription>
             </div>
-            {!checkProcess && (
-              <button onClick={checkUpdate} className="absolute top-6 right-6">
-                <RefreshCcw className="w-5 h-5" />
-              </button>
-            )}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="absolute top-6 right-5">
+                  <Pencil className="w-5 h-5" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-32">
+                <DropdownMenuItem
+                  onClick={handleEdit}
+                  className="cursor-pointer"
+                >
+                  <Pencil className="mr-2 h-4 w-4" />
+                  정보 수정
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={roleMenuUpdate}
+                  className="cursor-pointer"
+                >
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  정보 리로드
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={checkUpdate}
+                  className="cursor-pointer"
+                >
+                  <Download className="mr-2 h-4 w-4" />앱 업데이트
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
           <CardContent>
             <div className="space-y-4">
@@ -205,7 +444,7 @@ export const AddressPage = () => {
               <div className="space-y-2">
                 <Label className="text-sm text-muted-foreground">역할</Label>
                 <div className="flex flex-wrap gap-2">
-                  {userInfo?.role_list?.map((group) => (
+                  {roleNames?.map((group) => (
                     <Badge key={group.id} variant="outline">
                       {group.name}
                     </Badge>
@@ -217,7 +456,7 @@ export const AddressPage = () => {
                   메뉴 권한
                 </Label>
                 <div className="grid grid-cols-2 gap-2 min-h-12 max-h-20 overflow-y-auto">
-                  {userInfo?.menuList?.map((menu) => (
+                  {menuList?.map((menu) => (
                     <Badge key={menu.id} variant="outline">
                       {menu.name}
                     </Badge>
@@ -291,7 +530,7 @@ export const AddressPage = () => {
                             <span className="font-semibold">{user.name}</span>
                           </div>
                           <div className="flex flex-col gap-1 text-sm mt-2 pl-1 text-muted-foreground">
-                            <div
+                            <button
                               className="flex items-center gap-1"
                               onClick={() =>
                                 copyToClipboard(user.phone, "전화번호")
@@ -299,9 +538,9 @@ export const AddressPage = () => {
                             >
                               <Phone className="w-4 h-4" />
                               {user.phone}
-                            </div>
+                            </button>
                             {user.email && (
-                              <div
+                              <button
                                 className="flex items-center gap-1 mt-1"
                                 onClick={() =>
                                   copyToClipboard(user.email, "이메일")
@@ -309,7 +548,7 @@ export const AddressPage = () => {
                               >
                                 <Mail className="w-4 h-4" />
                                 {user.email}
-                              </div>
+                              </button>
                             )}
                           </div>
                         </div>
