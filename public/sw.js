@@ -1,12 +1,20 @@
-const version = "0.1.0";
+const version = "0.1.2";
 const domain = "https://hcsb.synology.me:6555";
 // const domain = "http://localhost:3000";
 const pushKey =
   "BNTNlbgs6jawRIR-1Q9VLbYcT3ZuZP8qbregBP7iYN3cAXjtaZ2gFyoqf8ESy-MSNUjcaUNjAuFL18spAWsMSZs";
+
+const STATIC_CACHE_NAME = "static-assets-" + version;
 const STATIC_ASSETS = [
-  { url: "/dist/", cacheName: "static-assets-" + version },
-  { url: "/dist/index.html", cacheName: "static-assets-" + version },
-  { url: "/dist/assets/", cacheName: "static-assets-" + version },
+  "/dist/index.html",
+  "/dist/offline.html",
+  "/dist/manifest.json",
+  "/dist/version.json",
+  "/dist/sw.js",
+  "/dist/icons/android-chrome-192x192.svg",
+  "/dist/icons/android-chrome-512x512.svg",
+  "/dist/icons/apple-touch-icon.svg",
+  "/dist/icons/favicon.svg",
 ];
 // const version = "SW_VERSION";
 // const domain = "SERVER_URL";
@@ -16,14 +24,11 @@ const STATIC_ASSETS = [
 self.addEventListener("install", (event) => {
   event.waitUntil(
     Promise.all([
-      // 기존 static assets 캐싱
-      Promise.all(
-        STATIC_ASSETS.map(async (asset) => {
-          const cache = await caches.open(asset.cacheName);
-          return cache.add(asset.url);
-        })
-      ),
-      // skipWaiting으로 대기 없이 활성화
+      // 단일 캐시로 통합하여 기본 정적 파일들 캐싱
+      caches.open(STATIC_CACHE_NAME).then((cache) => {
+        return cache.addAll(STATIC_ASSETS);
+      }),
+      // 대기 없이 바로 활성화
       self.skipWaiting(),
     ])
   );
@@ -142,8 +147,27 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(handleMinioRequest(event.request));
   } else if (url.pathname.startsWith("/api")) {
     event.respondWith(handleApiRequest(event.request));
+  } else if (url.pathname.includes("/assets/")) {
+    // assets 폴더의 파일들은 동적으로 캐시
+    event.respondWith(
+      caches.match(event.request).then(async (response) => {
+        if (response) return response;
+
+        const fetchResponse = await fetch(event.request);
+        if (fetchResponse.ok && event.request.method === "GET") {
+          const cache = await caches.open(STATIC_CACHE_NAME);
+          cache.put(event.request, fetchResponse.clone());
+        }
+        return fetchResponse;
+      })
+    );
   } else {
-    event.respondWith(handleStaticRequest(event.request));
+    // 다른 정적 파일들
+    event.respondWith(
+      caches
+        .match(event.request)
+        .then((response) => response || fetch(event.request))
+    );
   }
 });
 /*
@@ -164,76 +188,24 @@ Network First: 네트워크 먼저 시도, 실패하면 캐시
 Stale While Revalidate: 캐시 반환하면서 백그라운드에서 업데이트
 */
 
-const checkIfUpdateNeeded = async () => {
-  try {
-    const cacheNames = await caches.keys();
-    const staticCacheName = "static-assets-" + version;
-
-    if (!cacheNames.includes(staticCacheName)) {
-      return true;
-    }
-
-    const cache = await caches.open(staticCacheName);
-    const cachedUrls = await cache.keys();
-
-    const stripUrl = (url) => {
-      // URL에서 '/dist/' 이후의 경로만 추출
-      const match = url.match(/\/dist\/(.*)/);
-      return match ? match[1] : url;
-    };
-
-    const isMissingUrls = STATIC_ASSETS.some((asset) => {
-      const assetPath = stripUrl(asset.url);
-      return !cachedUrls.some((cachedUrl) => {
-        const cachedPath = stripUrl(cachedUrl.url);
-        // 빈 문자열인 경우(즉, /dist/ 자체인 경우) 처리
-        if (assetPath === "" && cachedPath === "") return true;
-        return cachedPath === assetPath;
-      });
-    });
-
-    return isMissingUrls;
-  } catch (error) {
-    console.error("Failed to check for updates:", error);
-    return true;
-  }
-};
-
 self.addEventListener("activate", async (event) => {
   event.waitUntil(
-    (async () => {
-      try {
-        const needsUpdate = await checkIfUpdateNeeded();
-
-        if (needsUpdate) {
-          // 캐시 스토리지만 관리하고 로컬스토리지는 건드리지 않도록 수정
-          await caches.keys().then((cacheNames) => {
-            const cacheDeletePromises = cacheNames.map((cacheName) => {
-              // static assets 캐시만 관리
-              if (cacheName !== version && cacheName.startsWith("static-")) {
-                return caches.delete(cacheName);
-              }
-              return Promise.resolve();
-            });
-            return Promise.all(cacheDeletePromises);
-          });
-
-          // 새로운 서비스워커가 페이지를 제어하기 전에 상태를 보존
-          const allClients = await self.clients.matchAll();
-          allClients.forEach((client) => {
-            // 클라이언트에게 서비스워커 업데이트 알림
-            client.postMessage({
-              type: "SW_UPDATE",
-              payload: { version },
-            });
-          });
-
-          await self.clients.claim();
-        }
-      } catch (error) {
-        console.error("Service Worker activation failed:", error);
-      }
-    })()
+    Promise.all([
+      // 이전 버전의 캐시 정리
+      caches.keys().then((cacheNames) => {
+        return Promise.all(
+          cacheNames
+            .filter(
+              (cacheName) =>
+                cacheName.startsWith("static-") &&
+                cacheName !== STATIC_CACHE_NAME
+            )
+            .map((cacheName) => caches.delete(cacheName))
+        );
+      }),
+      // 즉시 페이지 제어 시작 (이전 코드에서 조건부 실행을 제거)
+      self.clients.claim(),
+    ])
   );
 });
 
@@ -421,8 +393,6 @@ self.addEventListener("unregister", async function (event) {
 서비스 워커가 수동으로 등록 해제될 때
 serviceWorkerRegistration.unregister() 메서드가 호출될 때
 사용자가 브라우저 설정에서 사이트 데이터를 삭제할 때
-
-
 주요 용도:
 구독 정보 정리
 서버에 구독 취소 알림

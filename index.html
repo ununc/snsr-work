@@ -21,29 +21,22 @@
     <title>SNSR 대학 청년부</title>
   </head>
   <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
     <script>
       const zInit = async () => {
         if ("serviceWorker" in navigator) {
-          // controllerchange 이벤트 리스너 추가
-          navigator.serviceWorker.addEventListener("controllerchange", () => {
-            window.location.reload();
-          });
-
-          const registration = await navigator.serviceWorker.getRegistration();
-          if (!registration) {
-            window.addEventListener("load", async () => {
-              try {
-                await navigator.serviceWorker.register("/sw.js");
-              } catch (error) {
-                console.error("Service Worker 등록 실패:", error);
-              }
+          try {
+            await navigator.serviceWorker.register("/sw.js");
+            navigator.serviceWorker.addEventListener("controllerchange", () => {
+              window.location.reload();
             });
+          } catch (error) {
+            console.error("Service Worker 등록 실패:", error);
           }
         }
       };
       zInit();
     </script>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
