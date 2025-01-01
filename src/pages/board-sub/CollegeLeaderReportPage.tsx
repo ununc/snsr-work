@@ -342,7 +342,6 @@ export const CollegeLeaderReportPage = ({
           selectedDate={selectedDate}
           setSelectedDate={setSelectedDate}
         />
-
         <Button disabled={hasUserWritten} onClick={handleCreate}>
           작성하기
         </Button>

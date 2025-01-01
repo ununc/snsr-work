@@ -61,7 +61,7 @@ export const BoardPage = ({ boardId }: { boardId: BoardId }) => {
   const [isTemplate, setIsTemplate] = useState(false);
   const { text } = useChangedStringStore();
   const { pendingImages } = useImageStore();
-  const { userInfo } = useGlobalStore();
+  const { userInfo, getCanWriteByDescription } = useGlobalStore();
   const [initText, setInitText] = useState("");
 
   // 리스트 초기화 함수
@@ -319,6 +319,8 @@ export const BoardPage = ({ boardId }: { boardId: BoardId }) => {
     };
   }, [isLoading, total, list.length]);
 
+  const writeRight = getCanWriteByDescription(boardId);
+
   if (isCreate || isEdit) {
     return (
       <div className="page-wrapper">
@@ -396,7 +398,7 @@ export const BoardPage = ({ boardId }: { boardId: BoardId }) => {
             <ChevronRight className="h-4 w-4 rotate-180" />
             목록으로 돌아가기
           </Button>
-          {userInfo?.pid === selectedBoard.authorId && (
+          {writeRight && userInfo?.pid === selectedBoard.authorId && (
             <EditButton onClick={() => setIsEdit(true)}>수정</EditButton>
           )}
         </div>
@@ -496,7 +498,7 @@ export const BoardPage = ({ boardId }: { boardId: BoardId }) => {
             템플릿 관리
           </Button>
         )}
-        <Button onClick={handleClickCreate}>작성하기</Button>
+        {writeRight && <Button onClick={handleClickCreate}>작성하기</Button>}
       </div>
     </div>
   );

@@ -35,10 +35,13 @@ export const PathController = () => {
             path="youth-leader-report"
             element={<CollegeLeaderReportPage daechung={false} />}
           />
-          <Route path="praise-sheet" element={<SongPage kind={true} />} />
+          <Route
+            path="praise-sheet"
+            element={<SongPage kind={true} boardId="praise-sheett" />}
+          />
           <Route
             path="special-song-sheet"
-            element={<SongPage kind={false} />}
+            element={<SongPage kind={false} boardId="special-song-sheet" />}
           />
           <Route
             path="event-plan"

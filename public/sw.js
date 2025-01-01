@@ -1,4 +1,4 @@
-const version = "0.0.9";
+const version = "0.0.10";
 const domain = "https://hcsb.synology.me:6555";
 // const domain = "http://localhost:3000";
 const pushKey =
@@ -238,7 +238,7 @@ self.addEventListener("activate", async (event) => {
 });
 
 self.addEventListener("message", (event) => {
-  if (event.data.type === "SKIP_WAITING") {
+  if (event?.data && event.data.type === "SKIP_WAITING") {
     self.skipWaiting();
   }
   // 이후에 react code 에 새로고침을 넣어줄 필요가 있다

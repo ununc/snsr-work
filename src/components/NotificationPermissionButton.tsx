@@ -94,7 +94,7 @@ export const NotificationPermissionButton = () => {
     }
   };
 
-  if (permission === "granted") {
+  if (permission === "granted" || permission === "denied") {
     return null;
   }
 

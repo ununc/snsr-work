@@ -53,7 +53,17 @@ export const useServiceWorkerStore = create<ServiceWorkerState>()(
       if (registration?.waiting) {
         // 새로운 서비스워커에게 skipWaiting 메시지 전송
         registration.waiting.postMessage({ type: "SKIP_WAITING" });
-        // 페이지 새로고침
+        await new Promise((resolve) => {
+          registration.addEventListener(
+            "activate",
+            () => {
+              resolve(true);
+            },
+            { once: true }
+          );
+        });
+
+        // 업데이트된 컨텐츠를 보여주기 위해 페이지를 새로고침합니다
         window.location.reload();
       }
     },

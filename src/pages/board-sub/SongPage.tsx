@@ -18,7 +18,13 @@ import { Label } from "@radix-ui/react-label";
 import { ChevronRight, PlusCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 
-export const SongPage = ({ kind }: { kind: boolean }) => {
+export const SongPage = ({
+  kind,
+  boardId,
+}: {
+  kind: boolean;
+  boardId: string;
+}) => {
   const [selectedDate, setSelectedDate] = useState<string | null>(() => {
     const now = new Date();
     return `${now.getFullYear().toString()}-${(now.getMonth() + 1)
@@ -56,7 +62,7 @@ export const SongPage = ({ kind }: { kind: boolean }) => {
     }),
   });
 
-  const { userInfo } = useGlobalStore();
+  const { userInfo, getCanWriteByDescription } = useGlobalStore();
 
   const handleCreate = () => {
     setIsCreate(true);
@@ -198,6 +204,8 @@ export const SongPage = ({ kind }: { kind: boolean }) => {
     fetchLists();
   }, [selectedDate, kind]);
 
+  const writeRight = getCanWriteByDescription(boardId);
+
   // 작성/수정 폼
   if (isCreate || isEdit) {
     return (
@@ -309,7 +317,7 @@ export const SongPage = ({ kind }: { kind: boolean }) => {
             <ChevronRight className="h-4 w-4 rotate-180" />
             리스트로 돌아가기
           </Button>
-          <EditButton onClick={handleEdit}>수정</EditButton>
+          {writeRight && <EditButton onClick={handleEdit}>수정</EditButton>}
         </div>
       </div>
     );
@@ -349,7 +357,7 @@ export const SongPage = ({ kind }: { kind: boolean }) => {
           selectedDate={selectedDate}
           setSelectedDate={setSelectedDate}
         />
-        <Button onClick={handleCreate}>작성하기</Button>
+        {writeRight && <Button onClick={handleCreate}>작성하기</Button>}
       </div>
     </div>
   );

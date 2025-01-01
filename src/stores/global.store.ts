@@ -32,6 +32,7 @@ interface UserState {
   roleNames: Role[] | null;
   token: string | null;
   autoLogin: boolean;
+  getCanWriteByDescription: (description: string) => boolean;
   setUserData: (
     userInfo: UserInfo,
     menuList: Menu[],
@@ -115,7 +116,7 @@ const storage = {
 
 export const useGlobalStore = create<UserState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       userInfo: null,
       menuList: null,
       roleNames: null,
@@ -129,6 +130,13 @@ export const useGlobalStore = create<UserState>()(
         token: string,
         autoLogin: boolean
       ) => set({ userInfo, menuList, roleNames, token, autoLogin }),
+      getCanWriteByDescription: (description: string): boolean => {
+        const { menuList } = get();
+        const matchingDocument = menuList?.find(
+          (doc) => doc.description === description
+        );
+        return matchingDocument ? matchingDocument.can_write : false;
+      },
 
       updateUserInfo: (newUserInfo: UserInfo) => set({ userInfo: newUserInfo }),
       updateMenuList: (newMenuList: Menu[]) => set({ menuList: newMenuList }),
