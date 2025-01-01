@@ -371,7 +371,7 @@ export const AddressPage = () => {
                 <CardTitle className="mt-0.5">{userInfo?.name}</CardTitle>
               </div>
               <CardDescription className="mt-2">
-                {userInfo?.email || "이메일 없음"}
+                {userInfo?.email ?? "이메일 없음"}
               </CardDescription>
             </div>
             <DropdownMenu>

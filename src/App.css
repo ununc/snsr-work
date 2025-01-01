@@ -2,9 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
-#root {
-  width: 100dvw;
-  height: 100dvh;
+html {
+  overscroll-behavior: none;
 }
 
 body {
@@ -13,6 +12,15 @@ body {
   height: 100%;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+  touch-action: pan-y pinch-zoom;
+  overscroll-behavior: none;
+}
+
+#root {
+  width: 100dvw;
+  height: 100dvh;
+  touch-action: pan-y pinch-zoom;
+  overscroll-behavior: contain;
 }
 
 .h-safe-top {
@@ -97,5 +105,17 @@ body {
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+@supports (-webkit-touch-callout: none) {
+  @media screen and (orientation: landscape) {
+    .app-container {
+      /* height를 고정값으로 설정하여 가로 모드에서도 세로 모드 레이아웃 유지 */
+      height: 100dvh; /* dynamic viewport height */
+      width: 100dvw;
+      overflow-y: auto;
+      position: fixed;
+    }
   }
 }

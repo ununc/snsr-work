@@ -3,7 +3,7 @@ import { useState } from "react";
 
 export const UpdatePrompt = () => {
   const { updateLater, updateNow } = useServiceWorkerStore();
-  const [isLoading, setLoading] = useState(true);
+  const [isLoading, setLoading] = useState(false);
 
   return (
     <div className="absolute w-full -top-24 bg-white">
