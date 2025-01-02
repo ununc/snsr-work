@@ -11,15 +11,14 @@ const __dirname = dirname(__filename);
 dotenv.config();
 
 // 환경변수 사용
-const VERSION = process.env.VITE_VERSION;
+// const VERSION = process.env.VITE_VERSION;
+// const PUSHKEY = process.env.VITE_VAPID_PUBLIC_KEY;
 const DOMAIN = process.env.SERVER_URL;
-const PUSHKEY = process.env.VITE_VAPID_PUBLIC_KEY;
 const swPath = resolve(__dirname, "../dist/sw.js");
 let swContent = readFileSync(swPath, "utf-8");
 
-swContent = swContent
-  .replace("SW_VERSION", VERSION)
-  .replace("SERVER_URL", DOMAIN)
-  .replace("VAPID_PUBLIC_KEY", PUSHKEY);
+swContent = swContent.replace("http://localhost:3000", DOMAIN);
+// .replace("SW_VERSION", VERSION)
+//   .replace("VAPID_PUBLIC_KEY", PUSHKEY);
 
 writeFileSync(swPath, swContent);

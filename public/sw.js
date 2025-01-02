@@ -1,6 +1,5 @@
-const version = "0.1.4";
+const version = "0.1.5";
 const domain = "https://hcsb.synology.me:6555";
-// const domain = "http://localhost:3000";
 const pushKey =
   "BNTNlbgs6jawRIR-1Q9VLbYcT3ZuZP8qbregBP7iYN3cAXjtaZ2gFyoqf8ESy-MSNUjcaUNjAuFL18spAWsMSZs";
 
@@ -16,9 +15,6 @@ const STATIC_ASSETS = [
   "/icons/apple-touch-icon.svg",
   "/icons/favicon.svg",
 ];
-// const version = "SW_VERSION";
-// const domain = "SERVER_URL";
-// const pushKey = "VAPID_PUBLIC_KEY";
 
 // 버전이 오르면 다시 등록 되면서 install 실행
 self.addEventListener("install", (event) => {
@@ -81,40 +77,6 @@ const handleApiRequest = async (request) => {
     return new Response(JSON.stringify({ error: "Failed to fetch" }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
-    });
-  }
-};
-// 정적 파일 요청 처리 함수
-const handleStaticRequest = async (request) => {
-  try {
-    // URL 스키마 확인
-    const url = new URL(request.url);
-    const isValidScheme = url.protocol === "http:" || url.protocol === "https:";
-
-    // 캐시 확인 (유효한 스키마인 경우만)
-    if (isValidScheme) {
-      const cachedResponse = await caches.match(request);
-      if (cachedResponse) {
-        return cachedResponse;
-      }
-    }
-
-    // 네트워크 요청
-    const response = await fetch(request);
-
-    // 유효한 응답이고 지원되는 스키마인 경우만 캐시에 저장
-    if (response.status === 200 && isValidScheme) {
-      const responseClone = response.clone();
-      const cache = await caches.open(version);
-      await cache.put(request, responseClone);
-    }
-
-    return response;
-  } catch (error) {
-    console.error("Static request failed:", error);
-    return new Response("Network error", {
-      status: 500,
-      headers: { "Content-Type": "text/plain" },
     });
   }
 };
