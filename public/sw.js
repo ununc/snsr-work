@@ -1,4 +1,4 @@
-const version = "0.1.2";
+const version = "0.1.4";
 const domain = "https://hcsb.synology.me:6555";
 // const domain = "http://localhost:3000";
 const pushKey =
@@ -6,15 +6,15 @@ const pushKey =
 
 const STATIC_CACHE_NAME = "static-assets-" + version;
 const STATIC_ASSETS = [
-  "/dist/index.html",
-  "/dist/offline.html",
-  "/dist/manifest.json",
-  "/dist/version.json",
-  "/dist/sw.js",
-  "/dist/icons/android-chrome-192x192.svg",
-  "/dist/icons/android-chrome-512x512.svg",
-  "/dist/icons/apple-touch-icon.svg",
-  "/dist/icons/favicon.svg",
+  "/index.html",
+  "/offline.html",
+  "/manifest.json",
+  "/version.json",
+  "/sw.js",
+  "/icons/android-chrome-192x192.svg",
+  "/icons/android-chrome-512x512.svg",
+  "/icons/apple-touch-icon.svg",
+  "/icons/favicon.svg",
 ];
 // const version = "SW_VERSION";
 // const domain = "SERVER_URL";
@@ -143,32 +143,67 @@ const handleMinioRequest = async (request) => {
 
 self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
+
+  // Minio 서버 요청 처리
   if (url.hostname === "hcsb.synology.me" && url.port === "5401") {
     event.respondWith(handleMinioRequest(event.request));
-  } else if (url.pathname.startsWith("/api")) {
+    return;
+  }
+
+  // API 요청 처리
+  if (url.pathname.startsWith("/api")) {
     event.respondWith(handleApiRequest(event.request));
-  } else if (url.pathname.includes("/assets/")) {
-    // assets 폴더의 파일들은 동적으로 캐시
+    return;
+  }
+
+  // assets 폴더와 STATIC_ASSETS 처리 (둘 다 STATIC_CACHE_NAME 사용)
+  if (
+    url.pathname.includes("/assets/") ||
+    STATIC_ASSETS.includes(url.pathname)
+  ) {
     event.respondWith(
       caches.match(event.request).then(async (response) => {
-        if (response) return response;
+        // 캐시에 있으면 반환
+        if (response) {
+          // 네트워크 요청을 백그라운드로 수행하여 캐시 업데이트
+          fetch(event.request)
+            .then(async (networkResponse) => {
+              if (networkResponse.ok) {
+                const cache = await caches.open(STATIC_CACHE_NAME);
+                await cache.put(event.request, networkResponse.clone());
+              }
+            })
+            .catch(() => {
+              /* 에러 무시 */
+            });
 
-        const fetchResponse = await fetch(event.request);
-        if (fetchResponse.ok && event.request.method === "GET") {
-          const cache = await caches.open(STATIC_CACHE_NAME);
-          cache.put(event.request, fetchResponse.clone());
+          return response;
         }
-        return fetchResponse;
+
+        // 캐시에 없으면 네트워크 요청
+        try {
+          const networkResponse = await fetch(event.request);
+          if (networkResponse.ok) {
+            const cache = await caches.open(STATIC_CACHE_NAME);
+            await cache.put(event.request, networkResponse.clone());
+          }
+          return networkResponse;
+        } catch (error) {
+          // 네트워크 요청 실패시 오프라인 페이지 반환
+          return caches.match("/offline.html");
+        }
       })
     );
-  } else {
-    // 다른 정적 파일들
-    event.respondWith(
-      caches
-        .match(event.request)
-        .then((response) => response || fetch(event.request))
-    );
+    return;
   }
+
+  // 그 외 요청들
+  event.respondWith(
+    caches
+      .match(event.request)
+      .then((response) => response || fetch(event.request))
+      .catch(() => caches.match("/offline.html"))
+  );
 });
 /*
 발생 시점:
@@ -191,24 +226,34 @@ Stale While Revalidate: 캐시 반환하면서 백그라운드에서 업데이�
 self.addEventListener("activate", async (event) => {
   event.waitUntil(
     Promise.all([
-      // 이전 버전의 캐시 정리
+      // 모든 캐시 정리
       caches.keys().then((cacheNames) => {
         return Promise.all(
           cacheNames
-            .filter(
-              (cacheName) =>
-                cacheName.startsWith("static-") &&
-                cacheName !== STATIC_CACHE_NAME
-            )
+            .filter((cacheName) => cacheName !== STATIC_CACHE_NAME)
             .map((cacheName) => caches.delete(cacheName))
         );
       }),
-      // 즉시 페이지 제어 시작 (이전 코드에서 조건부 실행을 제거)
+      // 캐시 스토리지 정리
+      (async () => {
+        const cache = await caches.open(STATIC_CACHE_NAME);
+        const keys = await cache.keys();
+        const currentAssets = STATIC_ASSETS.concat(
+          Array.from(keys)
+            .filter((request) => request.url.includes("/assets/"))
+            .map((request) => request.url)
+        );
+
+        for (const request of keys) {
+          if (!currentAssets.includes(request.url)) {
+            await cache.delete(request);
+          }
+        }
+      })(),
       self.clients.claim(),
     ])
   );
 });
-
 self.addEventListener("message", (event) => {
   if (event?.data && event.data.type === "SKIP_WAITING") {
     self.skipWaiting();

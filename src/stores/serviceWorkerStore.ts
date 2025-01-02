@@ -26,34 +26,24 @@ export const useServiceWorkerStore = create<ServiceWorkerState>()(
 
           // updatefound 이벤트 리스너 등록
           const updateFoundPromise = new Promise((resolve) => {
-            registration.addEventListener(
-              "updatefound",
-              () => {
-                const newWorker = registration.installing;
+            const updateCallback = () => {
+              const newWorker = registration.installing || registration.waiting;
+              if (newWorker) {
+                newWorker.addEventListener("statechange", () => {
+                  if (newWorker.state === "installed") {
+                    set({ showUpdatePrompt: true });
+                    resolve(true);
+                  }
+                });
+              }
+            };
 
-                if (!newWorker) {
-                  resolve(false);
-                  return;
-                }
-
-                newWorker.addEventListener(
-                  "statechange",
-                  () => {
-                    if (newWorker.state === "installed") {
-                      set({ showUpdatePrompt: true });
-                      resolve(true);
-                    }
-                  },
-                  { once: true }
-                );
-              },
-              { once: true }
-            );
+            registration.addEventListener("updatefound", updateCallback);
           });
 
           // 일정 시간 후에도 업데이트가 없으면 종료
           const timeoutPromise = new Promise((resolve) =>
-            setTimeout(() => resolve(false), 270000)
+            setTimeout(() => resolve(false), 250000)
           );
           // 새로운 업데이트 확인
           await registration.update();
@@ -68,20 +58,11 @@ export const useServiceWorkerStore = create<ServiceWorkerState>()(
       const { registration } = get();
       if (registration?.waiting) {
         try {
+          navigator.serviceWorker.addEventListener("controllerchange", () => {
+            window.location.reload();
+          });
           // 새로운 서비스워커에게 skipWaiting 메시지 전송
           registration.waiting.postMessage({ type: "SKIP_WAITING" });
-          await new Promise((resolve) => {
-            registration.addEventListener(
-              "activate",
-              () => {
-                resolve(true);
-              },
-              { once: true }
-            );
-          });
-
-          // 업데이트된 컨텐츠를 보여주기 위해 페이지를 새로고침합니다
-          window.location.reload();
         } catch (error) {
           console.error("Error during update:", error);
         }
