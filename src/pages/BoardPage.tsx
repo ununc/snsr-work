@@ -281,6 +281,8 @@ export const BoardPage = ({ boardId }: { boardId: BoardId }) => {
   };
 
   useEffect(() => {
+    setIsCreate(false);
+    setIsEdit(false);
     resetList();
     fetchTemplateList();
   }, [boardId]);
@@ -498,7 +500,9 @@ export const BoardPage = ({ boardId }: { boardId: BoardId }) => {
             템플릿 관리
           </Button>
         )}
-        {writeRight && <Button onClick={handleClickCreate}>작성하기</Button>}
+        {userInfo?.pid && writeRight && (
+          <Button onClick={handleClickCreate}>작성하기</Button>
+        )}
       </div>
     </div>
   );

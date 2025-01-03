@@ -21,7 +21,7 @@ import { useGlobalStore } from "@/stores/global.store";
 
 export const BottomNav = () => {
   const navigate = useNavigate();
-  const { menuList } = useGlobalStore();
+  const { menuList, userInfo } = useGlobalStore();
   const { showUpdatePrompt, initGetRegister } = useServiceWorkerStore();
 
   const parentItems = menuList?.filter((item) => !item.owner);
@@ -101,15 +101,29 @@ export const BottomNav = () => {
                     <DropdownMenuLabel className="font-thin text-xs border-b bg-gray-100">
                       {parent.name}
                     </DropdownMenuLabel>
-                    {getChildItems(parent.id)?.map((child) => (
-                      <DropdownMenuItem
-                        key={child.id}
-                        onClick={() => handleItemClick(child.description)}
-                        className="pl-4 font-bold cursor-pointer"
-                      >
-                        {child.name}
-                      </DropdownMenuItem>
-                    ))}
+                    {getChildItems(parent.id)?.map((child) => {
+                      if (
+                        userInfo?.daechung &&
+                        child.name === "청년부 순장 보고"
+                      ) {
+                        return null;
+                      }
+                      if (
+                        !userInfo?.daechung &&
+                        child.name === "대학부 순장 보고"
+                      ) {
+                        return null;
+                      }
+                      return (
+                        <DropdownMenuItem
+                          key={child.id}
+                          onClick={() => handleItemClick(child.description)}
+                          className="pl-4 font-bold cursor-pointer"
+                        >
+                          {child.name}
+                        </DropdownMenuItem>
+                      );
+                    })}
                   </React.Fragment>
                 ))}
               </DropdownMenuContent>

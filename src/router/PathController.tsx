@@ -37,7 +37,7 @@ export const PathController = () => {
           />
           <Route
             path="praise-sheet"
-            element={<SongPage kind={true} boardId="praise-sheett" />}
+            element={<SongPage kind={true} boardId="praise-sheet" />}
           />
           <Route
             path="special-song-sheet"

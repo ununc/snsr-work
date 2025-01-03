@@ -202,6 +202,8 @@ export const SongPage = ({
 
   useEffect(() => {
     fetchLists();
+    setIsCreate(false);
+    setIsEdit(false);
   }, [selectedDate, kind]);
 
   const writeRight = getCanWriteByDescription(boardId);
@@ -357,7 +359,9 @@ export const SongPage = ({
           selectedDate={selectedDate}
           setSelectedDate={setSelectedDate}
         />
-        {writeRight && <Button onClick={handleCreate}>작성하기</Button>}
+        {userInfo?.pid && writeRight && (
+          <Button onClick={handleCreate}>작성하기</Button>
+        )}
       </div>
     </div>
   );

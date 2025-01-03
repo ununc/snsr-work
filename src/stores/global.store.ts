@@ -135,6 +135,7 @@ export const useGlobalStore = create<UserState>()(
         const matchingDocument = menuList?.find(
           (doc) => doc.description === description
         );
+        console.log("url=", description, matchingDocument);
         return matchingDocument ? matchingDocument.can_write : false;
       },
 
