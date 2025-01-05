@@ -27,10 +27,10 @@ interface SignUpForm {
 
 export const signup = async (info: SignUpForm) => {
   try {
-    const { data } = await apiClient.post("auth/signup", info);
-    return data;
+    await apiClient.post("auth/signup", info);
   } catch (error) {
     console.error("Error fetching users:", error);
+    throw error;
   }
 };
 

@@ -25,6 +25,7 @@ export const SignUpPage = () => {
     sarang: "",
     daechung: "대학부",
   });
+  const [passwordError, setPasswordError] = useState<string>("");
   const navigate = useNavigate();
 
   const handleChange = (
@@ -35,10 +36,26 @@ export const SignUpPage = () => {
       ...prevState,
       [name]: value,
     }));
+
+    // 비밀번호 입력 시 유효성 검사
+    if (name === "password") {
+      if (value.length < 6) {
+        setPasswordError("비밀번호는 6자리 이상이어야 합니다.");
+      } else {
+        setPasswordError("");
+      }
+    }
   };
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    // 회원가입 전 비밀번호 길이 검증
+    if (formData.password.length < 6) {
+      alert("비밀번호는 6자리 이상이어야 합니다.");
+      return;
+    }
+
     try {
       const payload = {
         ...formData,
@@ -87,6 +104,9 @@ export const SignUpPage = () => {
               onChange={handleChange}
               className="mt-1 block w-full rounded-md border border-gray-300 p-2"
             />
+            {passwordError && (
+              <p className="mt-1 text-sm text-red-600">{passwordError}</p>
+            )}
           </div>
           <div className="flex gap-3">
             <div>
@@ -118,19 +138,6 @@ export const SignUpPage = () => {
               />
             </div>
           </div>
-          {/* <div>
-            <label htmlFor="email" className="block text-sm font-medium">
-              이메일 (선택)
-            </label>
-            <input
-              id="email"
-              name="email"
-              type="email"
-              value={formData.email ?? ""}
-              onChange={handleChange}
-              className="mt-1 block w-full rounded-md border border-gray-300 p-2"
-            />
-          </div> */}
 
           <div className="w-full">
             <label htmlFor="birth" className="block text-sm font-medium">
