@@ -21,7 +21,7 @@ import { useGlobalStore } from "@/stores/global.store";
 
 export const BottomNav = () => {
   const navigate = useNavigate();
-  const { menuList, userInfo } = useGlobalStore();
+  const { menuList, roleNames, userInfo } = useGlobalStore();
   const { showUpdatePrompt, initGetRegister } = useServiceWorkerStore();
 
   const parentItems = menuList?.filter((item) => !item.owner);
@@ -102,17 +102,23 @@ export const BottomNav = () => {
                       {parent.name}
                     </DropdownMenuLabel>
                     {getChildItems(parent.id)?.map((child) => {
-                      if (
-                        userInfo?.daechung &&
-                        child.name === "청년부 순장 보고"
-                      ) {
-                        return null;
-                      }
-                      if (
-                        !userInfo?.daechung &&
-                        child.name === "대학부 순장 보고"
-                      ) {
-                        return null;
+                      const owner = roleNames?.some(
+                        (role) =>
+                          role.name === "관리자" || role.name === "목사님"
+                      );
+                      if (!owner) {
+                        if (
+                          userInfo?.daechung &&
+                          child.name === "청년부 순장 보고"
+                        ) {
+                          return null;
+                        }
+                        if (
+                          !userInfo?.daechung &&
+                          child.name === "대학부 순장 보고"
+                        ) {
+                          return null;
+                        }
                       }
                       return (
                         <DropdownMenuItem
