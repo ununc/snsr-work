@@ -1,6 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -49,75 +49,86 @@ export const AttendanceList = ({
   editable = false,
   onAttendancesChange,
 }: AttendanceListProps) => {
-  const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>(
+  const [expandedItems, setExpandedItems] = useState<Record<number, boolean>>(
     {}
   );
 
+  // 초기 펼침 상태 설정
   useEffect(() => {
-    const newExpandedState = attendances.reduce((acc, attendance) => {
-      acc[attendance.id] = isAllExpanded;
-      return acc;
-    }, {} as Record<string, boolean>);
+    setExpandedItems(
+      attendances.reduce((acc, _, index) => {
+        acc[index] = isAllExpanded;
+        return acc;
+      }, {} as Record<number, boolean>)
+    );
+  }, []); // 컴포넌트 마운트 시에만 실행
 
-    setExpandedItems(newExpandedState);
-  }, [isAllExpanded, attendances]);
-
-  const toggleExpand = (id: string) => {
+  const toggleExpand = useCallback((index: number) => {
     setExpandedItems((prev) => ({
       ...prev,
-      [id]: !prev[id],
+      [index]: !prev[index],
     }));
-  };
+  }, []);
 
-  const handleAttendanceChange = (
-    id: string,
-    field: keyof Attendance,
-    value: string
-  ) => {
-    const updatedAttendances = attendances.map((attendance) =>
-      attendance.id === id ? { ...attendance, [field]: value } : attendance
-    );
-    onAttendancesChange?.(updatedAttendances);
-  };
+  const handleAttendanceChange = useCallback(
+    (index: number, field: keyof Attendance, value: string) => {
+      if (!onAttendancesChange) return;
 
-  const renderField = (
-    attendance: Attendance,
-    field: "lifeSharing" | "faith" | "notes",
-    label: string
-  ) => {
-    if (editable) {
+      onAttendancesChange((prevAttendances) => {
+        if (!prevAttendances) return null;
+
+        return prevAttendances.map((attendance, i) =>
+          i === index ? { ...attendance, [field]: value } : attendance
+        );
+      });
+    },
+    [onAttendancesChange]
+  );
+
+  const renderField = useCallback(
+    (
+      attendance: Attendance,
+      index: number,
+      field: "lifeSharing" | "faith" | "notes",
+      label: string
+    ) => {
+      if (editable) {
+        return (
+          <div>
+            <h4 className="text-sm font-medium text-gray-500 mb-1 mt-4">
+              {label}
+            </h4>
+            <Textarea
+              value={attendance[field] || ""}
+              onChange={(e) =>
+                handleAttendanceChange(index, field, e.target.value)
+              }
+              className="min-h-[100px]"
+            />
+          </div>
+        );
+      }
+
+      if (!attendance[field]) return null;
+
       return (
         <div>
           <h4 className="text-sm font-medium text-gray-500 mb-1 mt-4">
             {label}
           </h4>
-          <Textarea
-            value={attendance[field]}
-            onChange={(e) =>
-              handleAttendanceChange(attendance.id, field, e.target.value)
-            }
-            className="min-h-[100px]"
-          />
+          <div className="text-sm whitespace-pre-wrap bg-gray-50 p-3 rounded-md">
+            {attendance[field]}
+          </div>
         </div>
       );
-    }
-
-    if (!attendance[field]) return null;
-
-    return (
-      <div>
-        <h4 className="text-sm font-medium text-gray-500 mb-1 mt-4">{label}</h4>
-        <div className="text-sm whitespace-pre-wrap bg-gray-50 p-3 rounded-md">
-          {attendance[field]}
-        </div>
-      </div>
-    );
-  };
+    },
+    [editable, handleAttendanceChange]
+  );
 
   return (
     <div className="space-y-4">
-      {attendances.map((attendance) => (
-        <Card key={attendance.id}>
+      {attendances.map((attendance, index) => (
+        <Card key={`attendance-${index}`}>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold">{attendance.memberName}</h3>
@@ -126,7 +137,7 @@ export const AttendanceList = ({
                   <Select
                     value={attendance.status}
                     onValueChange={(value: Attendance["status"]) =>
-                      handleAttendanceChange(attendance.id, "status", value)
+                      handleAttendanceChange(index, "status", value)
                     }
                   >
                     <SelectTrigger className="w-32">
@@ -151,10 +162,10 @@ export const AttendanceList = ({
                   </Badge>
                 )}
                 <button
-                  onClick={() => toggleExpand(attendance.id)}
+                  onClick={() => toggleExpand(index)}
                   className="p-1 hover:bg-gray-100 rounded-full transition-colors"
                 >
-                  {expandedItems[attendance.id] ? (
+                  {expandedItems[index] ? (
                     <ChevronUp className="h-5 w-5" />
                   ) : (
                     <ChevronDown className="h-5 w-5" />
@@ -163,11 +174,11 @@ export const AttendanceList = ({
               </div>
             </div>
 
-            {expandedItems[attendance.id] && (
+            {expandedItems[index] && (
               <div className="space-y-3">
-                {renderField(attendance, "lifeSharing", "생명나눔")}
-                {renderField(attendance, "faith", "신앙")}
-                {renderField(attendance, "notes", "노트")}
+                {renderField(attendance, index, "lifeSharing", "생명나눔")}
+                {renderField(attendance, index, "faith", "신앙")}
+                {renderField(attendance, index, "notes", "노트")}
               </div>
             )}
           </CardContent>
