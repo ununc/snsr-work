@@ -212,7 +212,7 @@ export const BoardPage = ({ boardId }: { boardId: BoardId }) => {
     });
 
     for (let i = 0; i < result.length; i++) {
-      board.content = text.replace(result[i], imageUrls[i]);
+      board.content = board.content.replace(result[i], imageUrls[i]);
     }
     setSelectedBoard(board);
   };

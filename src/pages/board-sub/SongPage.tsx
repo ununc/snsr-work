@@ -202,6 +202,7 @@ export const SongPage = ({
 
   useEffect(() => {
     fetchLists();
+    setSelectedSong(null);
     setIsCreate(false);
     setIsEdit(false);
   }, [selectedDate, kind]);
@@ -218,9 +219,9 @@ export const SongPage = ({
               ? `${formatDate(selectedSong!.singdate)} ${
                   kind ? "찬양" : "특송"
                 } 콘티`
-              : `${formatDate(
-                  kind ? createDate : createDate2
-                )} 찬양 콘티 작성하기`}
+              : `${formatDate(kind ? createDate : createDate2)} ${
+                  kind ? "찬양" : "특송"
+                } 콘티 작성하기`}
           </Label>
         </div>
         <div className="page-body">
@@ -342,7 +343,7 @@ export const SongPage = ({
             >
               <CardHeader className="p-4">
                 <div className="">
-                  {formatDate(`${song.singdate}`)} 찬양 콘티
+                  {formatDate(`${song.singdate}`)} {kind ? "찬양" : "특송"} 콘티
                 </div>
                 <div className="flex justify-end items-center">
                   <div className="text-sm text-gray-500">

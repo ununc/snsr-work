@@ -16,7 +16,6 @@ import {
 import React, { useEffect } from "react";
 import { useServiceWorkerStore } from "@/stores/serviceWorkerStore";
 import { UpdatePrompt } from "./UpdatePrompt";
-import { NotificationPermissionButton } from "./NotificationPermissionButton";
 import { useGlobalStore } from "@/stores/global.store";
 
 export const BottomNav = () => {
@@ -42,7 +41,7 @@ export const BottomNav = () => {
   return (
     <div className="shrink-0 pb-4">
       <nav className="w-full bg-white border-t-2 border-gray-200 relative">
-        {showUpdatePrompt ? <UpdatePrompt /> : <NotificationPermissionButton />}
+        {showUpdatePrompt && <UpdatePrompt />}
         <div className="flex justify-around items-center">
           <NavLink
             to="/news"

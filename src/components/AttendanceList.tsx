@@ -61,7 +61,7 @@ export const AttendanceList = ({
         return acc;
       }, {} as Record<number, boolean>)
     );
-  }, []); // 컴포넌트 마운트 시에만 실행
+  }, [isAllExpanded, attendances]); // 컴포넌트 마운트 시에만 실행
 
   const toggleExpand = useCallback((index: number) => {
     setExpandedItems((prev) => ({
@@ -147,13 +147,13 @@ export const AttendanceList = ({
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="NO">{STATUS_DISPLAY.NO}</SelectItem>
+                      <SelectItem value="ALL">{STATUS_DISPLAY.ALL}</SelectItem>
                       <SelectItem value="WORSHIP">
                         {STATUS_DISPLAY.WORSHIP}
                       </SelectItem>
                       <SelectItem value="CELL">
                         {STATUS_DISPLAY.CELL}
                       </SelectItem>
-                      <SelectItem value="ALL">{STATUS_DISPLAY.ALL}</SelectItem>
                     </SelectContent>
                   </Select>
                 ) : (
@@ -176,8 +176,8 @@ export const AttendanceList = ({
 
             {expandedItems[index] && (
               <div className="space-y-3">
-                {renderField(attendance, index, "lifeSharing", "생명나눔")}
-                {renderField(attendance, index, "faith", "신앙")}
+                {renderField(attendance, index, "lifeSharing", "삶 나눔")}
+                {renderField(attendance, index, "faith", "말씀 나눔")}
                 {renderField(attendance, index, "notes", "노트")}
               </div>
             )}

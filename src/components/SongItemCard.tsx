@@ -99,14 +99,16 @@ export const SongItemCard = ({
             </div>
             <div className="flex items-center gap-2">
               <h3 className="">URL:</h3>
-              <a
-                href={item.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-500 hover:underline truncate"
-              >
-                링크 이동
-              </a>
+              {item.url && (
+                <a
+                  href={item.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-500 hover:underline truncate"
+                >
+                  링크 이동
+                </a>
+              )}
             </div>
           </div>
         </CardContent>

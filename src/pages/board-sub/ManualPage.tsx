@@ -165,7 +165,6 @@ export const ManualPage = ({ boardId }: { boardId: string }) => {
   const handleCardClick = async (id: string) => {
     const board = await getBoard(id);
     const result = objectNameList(board.content);
-
     const imageUrls: string[] = await Promise.all(
       result.map((path) => getDownloadUrl(path))
     );
@@ -175,8 +174,9 @@ export const ManualPage = ({ boardId }: { boardId: string }) => {
     });
 
     for (let i = 0; i < result.length; i++) {
-      board.content = text.replace(result[i], imageUrls[i]);
+      board.content = board.content.replace(result[i], imageUrls[i]);
     }
+
     setSelectedBoard(board);
   };
 
@@ -303,7 +303,6 @@ export const ManualPage = ({ boardId }: { boardId: string }) => {
       </div>
     );
   }
-
   if (selectedBoard) {
     return (
       <div className="page-wrapper">

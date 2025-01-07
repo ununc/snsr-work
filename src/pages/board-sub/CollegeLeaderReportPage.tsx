@@ -171,6 +171,10 @@ export const CollegeLeaderReportPage = ({
 
   useEffect(() => {
     fetchLists();
+    setAttendances(null);
+    setNewAttendances(null);
+    setIsCreate(false);
+    setEditable(false);
   }, [selectedDate, daechung]);
 
   const handleCancel = () => {

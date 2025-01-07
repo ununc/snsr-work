@@ -23,6 +23,7 @@ import {
   RefreshCw,
   Download,
   Calendar,
+  BellRing,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useGlobalStore } from "@/stores/global.store";
@@ -37,6 +38,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { members } from "@/etc/sarangbang";
+import { sendSubscription } from "@/apis/push/subscribe";
 
 interface Contact {
   role: string;
@@ -61,6 +63,13 @@ const targetGroupNames = [
   "총괄국회계",
 ];
 
+const urlBase64ToUint8Array = (base64String: string): Uint8Array => {
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const rawData = window.atob(base64);
+  return Uint8Array.from([...rawData].map((char) => char.charCodeAt(0)));
+};
+
 export const AddressPage = () => {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -76,6 +85,7 @@ export const AddressPage = () => {
   });
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
+  // const [permission, setPermission] = useState("default");
 
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -89,7 +99,7 @@ export const AddressPage = () => {
     updateRoleNames,
     updateUserInfo,
   } = useGlobalStore();
-  const { checkForUpdates } = useServiceWorkerStore();
+  const { checkForUpdates, initGetRegister } = useServiceWorkerStore();
   useEffect(() => {
     const getAddresses = async () => {
       try {
@@ -122,6 +132,7 @@ export const AddressPage = () => {
         console.error("연락처 load 실패");
       }
     };
+    // setPermission(Notification.permission);
     getAddresses();
   }, []);
 
@@ -165,6 +176,39 @@ export const AddressPage = () => {
 
   const checkUpdate = async () => {
     await checkForUpdates();
+  };
+
+  const checkAlert = async () => {
+    try {
+      // 서비스 워커 지원 확인
+      if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+        throw new Error("브라우저가 푸시 알림을 지원하지 않습니다");
+      }
+
+      const registration = await initGetRegister();
+      // 권한 요청
+      const permission = await Notification.requestPermission();
+      if (!registration) return;
+
+      if (permission === "granted") {
+        // 서비스워커 등록 확인
+
+        // VAPID 키는 환경변수나 설정에서 가져오기
+        const vapidPublicKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
+
+        // 푸시 구독
+        const subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
+        });
+        // 서버에 구독 정보 전송
+        await sendSubscription(subscription);
+      }
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        console.error(err.message);
+      }
+    }
   };
 
   const handleEdit = () => {
@@ -380,7 +424,7 @@ export const AddressPage = () => {
                   <Pencil className="w-5 h-5" />
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-32">
+              <DropdownMenuContent align="end" className="w-32 space-y-2">
                 <DropdownMenuItem
                   onClick={handleEdit}
                   className="cursor-pointer"
@@ -400,6 +444,12 @@ export const AddressPage = () => {
                   className="cursor-pointer"
                 >
                   <Download className="mr-2 h-4 w-4" />앱 업데이트
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={checkAlert}
+                  className="cursor-pointer"
+                >
+                  <BellRing className="mr-2 h-4 w-4" /> 알림 설정
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

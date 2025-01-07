@@ -1,4 +1,4 @@
-const version = "0.2.1";
+const version = "0.2.5";
 const domain = "https://hcsb.synology.me:6555";
 // const domain = "http://localhost:3000";
 const pushKey =
@@ -84,16 +84,20 @@ const handleApiRequest = async (request) => {
 
 const handleMinioRequest = async (request) => {
   try {
-    // PUT 요청은 직접 전달
     if (request.method === "PUT") {
-      const response = await fetch(request.clone());
+      const response = await fetch(request);
+
       if (!response.ok) {
-        throw new Error(`MinIO upload failed: ${response.status}`);
+        const errorText = await response.text();
+        console.error("MinIO error response:", errorText);
+        throw new Error(
+          `MinIO upload failed: ${response.status} - ${errorText}`
+        );
       }
+
       return response;
     }
 
-    // GET 등 다른 요청은 일반적인 fetch 수행
     return fetch(request);
   } catch {
     console.error("MinIO request failed:");
@@ -248,24 +252,21 @@ self.addEventListener("push", function (event) {
   const data = event.data.json();
 
   // 알림 옵션 설정
-  const options = {
-    body: data.body,
-    data: data.data,
-    // 추가 알림 옵션들
-    icon: "/icons/android-chrome-192x192.svg", // 192x192px 권장
-    badge: "/icons/apple-touch-icon.svg", // 72x72px 권장
-    renotify: true,
-    tag: "default-tag",
-    actions: [
-      // iOS는 최대 2개의 액션 버튼 지원
-      { action: "view", title: "보기" },
-      { action: "close", title: "닫기" },
-    ],
-  };
-  event.waitUntil(
-    // 알림 표시
-    self.registration.showNotification(data.title, options)
-  );
+  // const options = {
+  //   body: data.body,
+  //   data: data.data,
+  //   // 추가 알림 옵션들
+  //   icon: "/icons/android-chrome-192x192.svg", // 192x192px 권장
+  //   badge: "/icons/apple-touch-icon.svg", // 72x72px 권장
+  //   renotify: true,
+  //   tag: "default-tag",
+  //   actions: [
+  //     // iOS는 최대 2개의 액션 버튼 지원
+  //     { action: "view", title: "보기" },
+  //     { action: "close", title: "닫기" },
+  //   ],
+  // };
+  event.waitUntil(self.registration.showNotification(data.title, data));
 });
 /*
 발생 시점:
