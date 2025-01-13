@@ -11,6 +11,8 @@ import { ManualPage } from "@/pages/board-sub/ManualPage";
 import { CollegeLeaderReportPage } from "@/pages/board-sub/CollegeLeaderReportPage";
 import { SongPage } from "@/pages/board-sub/SongPage";
 import { BoardPage } from "@/pages/BoardPage";
+import { LiturgyPage } from "@/pages/posts/LiturgyPage";
+// import { PraisePage } from "@/pages/posts/PraisePage";
 
 export const PathController = () => {
   return (
@@ -22,6 +24,8 @@ export const PathController = () => {
         <Route path="/calendar" element={<CalendarPage />} />
         <Route path="/address" element={<AddressPage />} />
         <Route path="/board">
+          <Route path="liturgy" element={<LiturgyPage boardId="liturgy" />} />
+          {/*  */}
           <Route path="manual" element={<ManualPage boardId="manual" />} />
           <Route
             path="monthly-report"

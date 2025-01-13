@@ -10,3 +10,12 @@ export const pathTextMatcher = {
   "worship-committee": "예배 위원회",
   "worship-script": "예배 스크립트",
 };
+
+export type BoardId = keyof typeof pathTextMatcher;
+
+export const createEditState = {
+  list: "",
+  detail: "",
+  create: "생성",
+  edit: "수정",
+};

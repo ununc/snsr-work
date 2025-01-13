@@ -23,7 +23,9 @@ export const BottomNav = () => {
   const { menuList, roleNames, userInfo } = useGlobalStore();
   const { showUpdatePrompt, initGetRegister } = useServiceWorkerStore();
 
-  const parentItems = menuList?.filter((item) => !item.owner);
+  const parentItems = menuList
+    ?.filter((item) => !item.owner)
+    .sort((a, b) => a.order - b.order);
   const getChildItems = (parentId: string) => {
     return menuList
       ?.filter((item) => item.owner === parentId)
