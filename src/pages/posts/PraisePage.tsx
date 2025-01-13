@@ -5,13 +5,11 @@ import { createPost, getPostList, updatePost } from "@/apis/posts/posts";
 import { PraiseForm } from "@/components/page/PraiseForm";
 import { MonthController } from "@/components/post/MonthController";
 import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { createEditState } from "@/etc/routeWord";
 import { useGlobalStore } from "@/stores/global.store";
 import { deepCopy } from "@/util/deepCopy";
-import { Calendar, Clock } from "lucide-react";
+import { Clock } from "lucide-react";
 import { useState } from "react";
 
 type SongItemWithoutImages = Omit<Praise, "songs"> & {
@@ -113,11 +111,25 @@ export const PraisePage = ({ boardId }: { boardId: BoardName }) => {
       });
     });
     try {
+      const transformedContent = {
+        description: newContent.description,
+        songs: newContent.songs.map((song) => ({
+          title: song.title,
+          lyrics: song.lyrics,
+          link: song.link,
+          images: song.images
+            ? song.images
+                .map((img) => img.objectName)
+                .filter((name): name is string => !!name)
+            : [],
+        })),
+      };
+
       await Promise.all(uploadPromises);
       const createdPost = await createPost(userInfo.pid, {
         boardName: boardId,
         targetDate: selectedNewContentDate?.toLocaleDateString("fr-CA"),
-        content: newContent as Praise,
+        content: transformedContent,
       });
       setBoardList((prev) => {
         // 새 게시물을 포함한 전체 배열 생성
@@ -185,6 +197,21 @@ export const PraisePage = ({ boardId }: { boardId: BoardName }) => {
     });
 
     try {
+      const transformedContent = {
+        description: modifiedContent.description,
+        songs: modifiedContent.songs.map((song) => ({
+          title: song.title,
+          lyrics: song.lyrics,
+          link: song.link,
+          // images 배열을 objectName만 포함하는 string[]로 변환
+          images: song.images
+            ? song.images
+                .map((img) => img.objectName)
+                .filter((name): name is string => !!name)
+            : [],
+        })),
+      };
+
       // 모든 업로드와 삭제 작업 실행
       await Promise.all([...uploadPromises, ...deletePromises]);
 
@@ -193,7 +220,7 @@ export const PraisePage = ({ boardId }: { boardId: BoardName }) => {
         ...selectedBoard,
         boardName: boardId,
         targetDate: selectedNewContentDate?.toLocaleDateString("fr-CA"),
-        content: modifiedContent as Praise,
+        content: transformedContent,
       });
 
       // 게시글 목록 업데이트
@@ -201,8 +228,8 @@ export const PraisePage = ({ boardId }: { boardId: BoardName }) => {
         prev.map((item) => (item.id === editedPost.id ? editedPost : item))
       );
 
-      // 상세 페이지 업데이트
-      await handleItemDetail(editedPost);
+      setSelectedBoard({ ...selectedBoard, content: newContent } as Posts);
+      setBoardState("detail");
     } catch (error) {
       console.error("Error during edit process:", error);
       // 에러 처리 로직 추가 (예: 에러 메시지 표시)
@@ -238,12 +265,6 @@ export const PraisePage = ({ boardId }: { boardId: BoardName }) => {
     setBoardState("detail");
   };
 
-  const calculateRows = (text: string) => {
-    if (!text) return 1;
-    // 줄바꿈 문자(\n)의 개수를 세고 1을 더합니다 (마지막 줄)
-    return (text.match(/\n/g) || []).length + 1;
-  };
-
   const renderContent = () => {
     switch (boardState) {
       case "create":
@@ -252,68 +273,20 @@ export const PraisePage = ({ boardId }: { boardId: BoardName }) => {
           <PraiseForm
             initialData={newContent}
             onSubmit={(data: SongItemWithoutImages) => {
-              // 데이터 처리
-              console.log(data);
+              setNewContent(data);
             }}
             userPID={userInfo!.pid}
           />
         );
       case "detail":
         if (selectedBoard) {
-          const content = selectedBoard.content as SongItemWithoutImages;
           return (
-            <>
-              <div className="flex items-center pb-4 gap-2 text-muted-foreground">
-                <Calendar className="w-4 h-4" />
-                <span>{selectedBoard.targetDate}</span>
-              </div>
-
-              <div className="mb-4">
-                <Label className="mb-2 block">콘티 설명</Label>
-                <Textarea
-                  readOnly
-                  value={content.description}
-                  className=" resize-none"
-                  rows={calculateRows(content.description)}
-                />
-              </div>
-              {content.songs?.map((song) => (
-                <>
-                  <div className="mb-4">
-                    <Label className="mb-2 block">제목</Label>
-                    <Input readOnly value={song.title} />
-                  </div>
-                  <div className="mb-4">
-                    <Label className="mb-2 block">가사</Label>
-                    <Textarea
-                      readOnly
-                      value={song.lyrics}
-                      className=" resize-none"
-                      rows={calculateRows(song.lyrics)}
-                    />
-                  </div>
-                  <div className="mb-4">
-                    <Label className="mb-2 block">링크</Label>
-                    <Input readOnly value={song.link} />
-                  </div>
-
-                  <div className="grid gap-4">
-                    {song.images?.map((img) => (
-                      <div
-                        key={img.id}
-                        className="relative w-full border rounded-lg overflow-hidden"
-                      >
-                        <img
-                          src={img.preview}
-                          alt="Preview"
-                          className="w-full h-96 object-contain"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </>
-              ))}
-            </>
+            <PraiseForm
+              initialData={selectedBoard.content as SongItemWithoutImages}
+              onSubmit={() => {}}
+              userPID={userInfo!.pid}
+              readonly
+            />
           );
         }
         return <div>선택한 게시물 정보가 없습니다.</div>;

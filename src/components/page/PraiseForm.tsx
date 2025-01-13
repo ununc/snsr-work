@@ -42,20 +42,25 @@ interface PraiseFormProps {
   initialData?: SongItemWithoutImages;
   onSubmit: (data: SongItemWithoutImages) => void;
   userPID: string;
+  readonly?: boolean;
 }
 
 export const PraiseForm: React.FC<PraiseFormProps> = ({
   initialData = initValue,
   onSubmit,
   userPID,
+  readonly = false,
 }) => {
   const [formData, setFormData] = useState<SongItemWithoutImages>(initialData);
 
   useEffect(() => {
-    onSubmit(formData);
-  }, [formData, onSubmit]);
+    if (!readonly) {
+      onSubmit(formData);
+    }
+  }, [formData, onSubmit, readonly]);
 
   const handleDescriptionChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
+    if (readonly) return;
     setFormData((prev) => ({
       ...prev,
       description: e.target.value,
@@ -67,6 +72,7 @@ export const PraiseForm: React.FC<PraiseFormProps> = ({
     field: keyof Song,
     value: string
   ) => {
+    if (readonly) return;
     setFormData((prev) => ({
       ...prev,
       songs: prev.songs.map((song, i) =>
@@ -79,6 +85,7 @@ export const PraiseForm: React.FC<PraiseFormProps> = ({
     songIndex: number,
     e: ChangeEvent<HTMLInputElement>
   ) => {
+    if (readonly) return;
     const files = e.target.files;
     if (!files) return;
 
@@ -112,6 +119,7 @@ export const PraiseForm: React.FC<PraiseFormProps> = ({
   };
 
   const removeImage = (songIndex: number, imageId: string) => {
+    if (readonly) return;
     setFormData((prev) => ({
       ...prev,
       songs: prev.songs.map((song, i) => {
@@ -125,6 +133,7 @@ export const PraiseForm: React.FC<PraiseFormProps> = ({
   };
 
   const addSong = () => {
+    if (readonly) return;
     setFormData((prev) => ({
       ...prev,
       songs: [...prev.songs, { title: "", lyrics: "", link: "", images: [] }],
@@ -132,6 +141,7 @@ export const PraiseForm: React.FC<PraiseFormProps> = ({
   };
 
   const removeSong = (index: number) => {
+    if (readonly) return;
     setFormData((prev) => ({
       ...prev,
       songs: prev.songs.filter((_, i) => i !== index),
@@ -147,6 +157,8 @@ export const PraiseForm: React.FC<PraiseFormProps> = ({
           placeholder="인도자 솔로 있습니다."
           rows={6}
           onChange={handleDescriptionChange}
+          readOnly={readonly}
+          className={readonly ? "bg-gray-50" : ""}
         />
       </div>
 
@@ -154,7 +166,7 @@ export const PraiseForm: React.FC<PraiseFormProps> = ({
         <div key={songIndex} className="border rounded-lg p-4 mb-4">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-medium">곡 {songIndex + 1}</h3>
-            {formData.songs.length > 1 && (
+            {!readonly && formData.songs.length > 1 && (
               <Button
                 type="button"
                 variant="destructive"
@@ -174,6 +186,8 @@ export const PraiseForm: React.FC<PraiseFormProps> = ({
               onChange={(e) =>
                 handleSongChange(songIndex, "title", e.target.value)
               }
+              readOnly={readonly}
+              className={readonly ? "bg-gray-50" : ""}
             />
           </div>
 
@@ -186,6 +200,8 @@ export const PraiseForm: React.FC<PraiseFormProps> = ({
                 handleSongChange(songIndex, "lyrics", e.target.value)
               }
               rows={4}
+              readOnly={readonly}
+              className={readonly ? "bg-gray-50" : ""}
             />
           </div>
 
@@ -197,28 +213,32 @@ export const PraiseForm: React.FC<PraiseFormProps> = ({
               onChange={(e) =>
                 handleSongChange(songIndex, "link", e.target.value)
               }
+              readOnly={readonly}
+              className={readonly ? "bg-gray-50" : ""}
             />
           </div>
 
           <div className="space-y-4">
             <div className="flex items-center gap-4">
               <Label className="mb-0">이미지</Label>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  const input = document.getElementById(
-                    `image-upload-${songIndex}`
-                  );
-                  if (input) {
-                    input.click();
-                  }
-                }}
-              >
-                <ImageIcon className="w-4 h-4 mr-2" />
-                이미지 추가
-              </Button>
+              {!readonly && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const input = document.getElementById(
+                      `image-upload-${songIndex}`
+                    );
+                    if (input) {
+                      input.click();
+                    }
+                  }}
+                >
+                  <ImageIcon className="w-4 h-4 mr-2" />
+                  이미지 추가
+                </Button>
+              )}
               <input
                 id={`image-upload-${songIndex}`}
                 type="file"
@@ -240,15 +260,17 @@ export const PraiseForm: React.FC<PraiseFormProps> = ({
                     alt="Preview"
                     className="w-full h-96 object-contain"
                   />
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    size="sm"
-                    className="absolute p-2 top-2 right-2 rounded-full"
-                    onClick={() => removeImage(songIndex, img.id)}
-                  >
-                    <TrashIcon className="w-4 h-4" />
-                  </Button>
+                  {!readonly && (
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      className="absolute p-2 top-2 right-2 rounded-full"
+                      onClick={() => removeImage(songIndex, img.id)}
+                    >
+                      <TrashIcon className="w-4 h-4" />
+                    </Button>
+                  )}
                 </div>
               ))}
             </div>
@@ -256,11 +278,13 @@ export const PraiseForm: React.FC<PraiseFormProps> = ({
         </div>
       ))}
 
-      <div className="flex justify-center mt-4">
-        <Button type="button" variant="outline" onClick={addSong}>
-          곡 추가하기
-        </Button>
-      </div>
+      {!readonly && (
+        <div className="flex justify-center mt-4">
+          <Button type="button" variant="outline" onClick={addSong}>
+            곡 추가하기
+          </Button>
+        </div>
+      )}
     </div>
   );
 };
