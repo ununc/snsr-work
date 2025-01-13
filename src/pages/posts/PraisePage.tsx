@@ -106,7 +106,9 @@ export const PraisePage = ({ boardId }: { boardId: BoardName }) => {
     newContent.songs.forEach((song) => {
       song.images?.forEach((image) => {
         if (image.objectName && image.file) {
-          uploadPromises.push(uploadImage(image.objectName, image.file));
+          uploadPromises.push(
+            uploadImage(image.uploadUrl as string, image.file)
+          );
         }
       });
     });
@@ -176,7 +178,7 @@ export const PraisePage = ({ boardId }: { boardId: BoardName }) => {
         if (modifiedImage.file && modifiedImage.uploadUrl) {
           // 새로 추가된 이미지 발견
           uploadPromises.push(
-            uploadImage(modifiedImage.objectName, modifiedImage.file)
+            uploadImage(modifiedImage.uploadUrl as string, modifiedImage.file)
           );
         }
       });

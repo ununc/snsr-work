@@ -92,7 +92,7 @@ export const LiturgyPage = ({ boardId }: { boardId: BoardName }) => {
 
     for (const image of imageFiles) {
       if (image.file) {
-        uploadPromises.push(uploadImage(image.objectName, image.file));
+        uploadPromises.push(uploadImage(image.uploadUrl as string, image.file));
       }
     }
     try {
@@ -105,6 +105,7 @@ export const LiturgyPage = ({ boardId }: { boardId: BoardName }) => {
           images: imageFiles.map((image) => image.objectName),
         },
       });
+
       setBoardList((prev) => {
         // 새 게시물을 포함한 전체 배열 생성
         const newList = [createdPost, ...prev];
@@ -144,7 +145,7 @@ export const LiturgyPage = ({ boardId }: { boardId: BoardName }) => {
     const uploadPromises = [];
     for (const image of imageFiles) {
       if (image.file) {
-        uploadPromises.push(uploadImage(image.objectName, image.file));
+        uploadPromises.push(uploadImage(image.uploadUrl as string, image.file));
       }
     }
     const deletePromise = [];
