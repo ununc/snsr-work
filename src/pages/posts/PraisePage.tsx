@@ -347,7 +347,7 @@ export const PraisePage = ({ boardId }: { boardId: BoardName }) => {
         );
     }
   };
-  const canWrite = !getCanWriteByDescription(boardId);
+  const canWrite = getCanWriteByDescription(boardId);
   return (
     <div className="page-wrapper">
       <div className="h-4 flex items-center mb-4">

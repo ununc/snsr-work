@@ -12,7 +12,7 @@ import { CollegeLeaderReportPage } from "@/pages/board-sub/CollegeLeaderReportPa
 import { SongPage } from "@/pages/board-sub/SongPage";
 import { BoardPage } from "@/pages/BoardPage";
 import { LiturgyPage } from "@/pages/posts/LiturgyPage";
-// import { PraisePage } from "@/pages/posts/PraisePage";
+import { PraisePage } from "@/pages/posts/PraisePage";
 
 export const PathController = () => {
   return (
@@ -25,6 +25,7 @@ export const PathController = () => {
         <Route path="/address" element={<AddressPage />} />
         <Route path="/board">
           <Route path="liturgy" element={<LiturgyPage boardId="liturgy" />} />
+          <Route path="praise" element={<PraisePage boardId="praise" />} />
           {/*  */}
           <Route path="manual" element={<ManualPage boardId="manual" />} />
           <Route
@@ -38,10 +39,6 @@ export const PathController = () => {
           <Route
             path="youth-leader-report"
             element={<CollegeLeaderReportPage daechung={false} />}
-          />
-          <Route
-            path="praise-sheet"
-            element={<SongPage kind={true} boardId="praise-sheet" />}
           />
           <Route
             path="special-song-sheet"
