@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { X, Download, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { createPortal } from "react-dom";
 
 interface ImageViewerProps {
   images: { preview: string; objectName: string }[];
@@ -44,8 +45,8 @@ export const ImageViewer = ({
     }
   };
 
-  return (
-    <div className="fixed inset-0 -top-6 bg-black bg-opacity-90 z-50 flex items-center justify-center">
+  const content = (
+    <div className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center">
       <div className="absolute top-6 right-4 flex gap-2">
         <Button
           onClick={handleDownload}
@@ -100,4 +101,6 @@ export const ImageViewer = ({
       </div>
     </div>
   );
+
+  return createPortal(content, document.body);
 };

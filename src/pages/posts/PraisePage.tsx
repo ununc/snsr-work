@@ -325,6 +325,7 @@ export const PraisePage = ({ boardId }: { boardId: BoardName }) => {
     <div className="page-wrapper">
       <div className="h-4 flex items-center mb-4">
         <Label className="text-xl font-bold">
+          {boardState === "detail" && selectedBoard?.targetDate}{" "}
           {PostTextMatcher[boardId]} {createEditState[boardState]}
         </Label>
       </div>
