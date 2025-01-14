@@ -5,6 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { TrashIcon, ImageIcon } from "lucide-react";
 import { getPresignedUrl } from "@/apis/minio/images";
+import { ImageViewer } from "./ImageViewr";
 
 interface SongItem {
   id: string;
@@ -52,6 +53,9 @@ export const PraiseForm: React.FC<PraiseFormProps> = ({
   readonly = false,
 }) => {
   const [formData, setFormData] = useState<SongItemWithoutImages>(initialData);
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const [selectedSongIndex, setSelectedSongIndex] = useState(0);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
 
   useEffect(() => {
     if (!readonly) {
@@ -146,6 +150,14 @@ export const PraiseForm: React.FC<PraiseFormProps> = ({
       ...prev,
       songs: prev.songs.filter((_, i) => i !== index),
     }));
+  };
+
+  const handleImageClick = (songIndex: number, imageIndex: number) => {
+    if (readonly) {
+      setSelectedSongIndex(songIndex);
+      setSelectedImageIndex(imageIndex);
+      setViewerOpen(true);
+    }
   };
 
   return (
@@ -250,10 +262,11 @@ export const PraiseForm: React.FC<PraiseFormProps> = ({
             </div>
 
             <div className="space-y-6">
-              {song.images?.map((img) => (
+              {song.images?.map((img, imgIndex) => (
                 <div
                   key={img.id}
                   className="relative border rounded-lg overflow-hidden"
+                  onClick={() => handleImageClick(songIndex, imgIndex)}
                 >
                   <img
                     src={img.preview}
@@ -284,6 +297,14 @@ export const PraiseForm: React.FC<PraiseFormProps> = ({
             곡 추가하기
           </Button>
         </div>
+      )}
+      {readonly && formData.songs[selectedSongIndex]?.images && (
+        <ImageViewer
+          images={formData.songs[selectedSongIndex].images || []}
+          isOpen={viewerOpen}
+          onClose={() => setViewerOpen(false)}
+          initialIndex={selectedImageIndex}
+        />
       )}
     </div>
   );
