@@ -36,7 +36,7 @@ export const PathController = () => {
             element={<LiturgistsPage boardId="liturgists" />}
           />
           <Route
-            path="worship-script"
+            path="congregation"
             element={<CongregationPage boardId="congregation" />}
           />
           <Route
@@ -44,16 +44,16 @@ export const PathController = () => {
             element={<AdvertisementPage boardId="advertisement" />}
           />
           <Route
-            path="newcomer-individual"
+            path="newcomer"
             element={<NewcomerPage boardId="newcomer" />}
           />
           <Route
-            path="newcomer-weekly"
+            path="absenteeism"
             element={<AbsenteeismPage boardId="absenteeism" />}
           />
 
           <Route
-            path="promotion-report"
+            path="promotion"
             element={<PromotionPage boardId="promotion" />}
           />
           {/*  */}

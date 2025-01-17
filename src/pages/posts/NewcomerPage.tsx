@@ -289,7 +289,7 @@ export const NewcomerPage = ({ boardId }: { boardId: BoardName }) => {
     fetchData();
   }, [boardId]);
 
-  const canWrite = !getCanWriteByDescription(boardId);
+  const canWrite = getCanWriteByDescription(boardId);
 
   const renderContent = () => {
     switch (boardState) {
