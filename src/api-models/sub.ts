@@ -54,18 +54,20 @@ export interface Liturgists {
 //
 export interface Newcomer {
   leader: string;
-  name: string;
+  // name: string;
   pear: number;
   phone?: string;
   job?: string;
-  week: number;
   newComer: boolean;
   baptism: boolean;
-  registrationDate: string;
+  // registrationDate: string;
+  churchName?: string;
+  pastorVisited: boolean;
   registrationReason?: string;
   notes?: string[];
   absence?: string;
   climbing?: string;
+  objectName?: string;
 }
 
 //
@@ -77,6 +79,7 @@ export interface SongItem {
 }
 
 export interface Praise {
+  kind: "찬양" | "특송" | "봉헌" | "끝송";
   description: string;
   songs: SongItem[];
 }

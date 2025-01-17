@@ -36,7 +36,7 @@ body {
 }
 
 .page-wrapper {
-  @apply absolute inset-0 overflow-hidden h-full flex flex-col px-4 pb-4 pt-8;
+  @apply absolute inset-0 overflow-hidden h-full flex flex-col px-4 pb-4 pt-6;
 }
 
 .page-body {

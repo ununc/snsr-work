@@ -77,7 +77,8 @@ export const YearMonth: React.FC<MonthPickerProps> = ({ changeYearMonth }) => {
               <Button
                 key={date.valueOf()}
                 variant={
-                  selectedDate.valueOf() === date.valueOf()
+                  `${selectedDate.getFullYear()}-${selectedDate.getMonth()}` ===
+                  `${date.getFullYear()}-${date.getMonth()}`
                     ? "secondary"
                     : "ghost"
                 }

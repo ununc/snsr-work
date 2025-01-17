@@ -17,6 +17,8 @@ interface IProps {
   changeYearMonth: (date: Date) => void;
   changeRequestYearMonth: (date: Date) => void;
   initRequestDate?: Date | null;
+  noDetail?: boolean;
+  noDateCreateEdit?: boolean;
 }
 
 export const MonthController = ({
@@ -31,13 +33,19 @@ export const MonthController = ({
   changeRequestYearMonth,
   handleClickCreate,
   initRequestDate,
+  noDetail = false,
+  noDateCreateEdit = false,
 }: IProps) => {
   const handleClickCancelCreate = () => {
     setBoardState("list");
   };
 
   const handleClickCancelEdit = () => {
-    setBoardState("detail");
+    if (noDetail) {
+      setBoardState("list");
+    } else {
+      setBoardState("detail");
+    }
   };
 
   const handleClickCancel = () => {
@@ -75,10 +83,14 @@ export const MonthController = ({
     case "create":
       return (
         <div className="flex justify-between items-center">
-          <YearMonthLoadDay
-            changeDate={changeRequestYearMonth}
-            initDate={initRequestDate}
-          />
+          {noDateCreateEdit ? (
+            <div></div>
+          ) : (
+            <YearMonthLoadDay
+              changeDate={changeRequestYearMonth}
+              initDate={initRequestDate}
+            />
+          )}
           <div className="flex justify-end items-center gap-2">
             <Button onClick={handleClickCancel} variant="destructive">
               취소

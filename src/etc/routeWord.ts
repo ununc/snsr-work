@@ -15,7 +15,7 @@ export type BoardId = keyof typeof pathTextMatcher;
 
 export const createEditState = {
   list: "",
-  detail: "",
+  detail: "콘티",
   create: "생성",
   edit: "수정",
 };

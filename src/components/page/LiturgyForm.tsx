@@ -3,7 +3,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { ImageIcon, TrashIcon, Calendar } from "lucide-react";
+import { ImageIcon, TrashIcon } from "lucide-react";
 import { getPresignedUrl } from "@/apis/minio/images";
 import { ImageViewer } from "./ImageViewr";
 
@@ -21,7 +21,6 @@ interface LiturgyWithoutImages {
   continuity: string;
   hymn: string;
   images?: ImageItem[];
-  targetDate?: string;
 }
 
 const initValue: LiturgyWithoutImages = {
@@ -54,6 +53,12 @@ export const LiturgyForm: React.FC<LiturgyFormProps> = ({
       onSubmit(formData);
     }
   }, [formData, onSubmit, readonly]);
+
+  useEffect(() => {
+    if (readonly) {
+      setFormData(initialData);
+    }
+  }, [readonly, initialData]);
 
   const handleChange = (
     field: keyof LiturgyWithoutImages,
@@ -113,16 +118,8 @@ export const LiturgyForm: React.FC<LiturgyFormProps> = ({
     if (!text) return 1;
     return (text.match(/\n/g) || []).length + 1;
   };
-
   return (
     <div className="space-y-6 mb-6">
-      {formData.targetDate && (
-        <div className="flex items-center pb-4 gap-2 text-muted-foreground">
-          <Calendar className="w-4 h-4" />
-          <span>{formData.targetDate}</span>
-        </div>
-      )}
-
       <div className="mb-4">
         <Label className="mb-2 block">말씀 제목</Label>
         <Input

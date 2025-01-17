@@ -11,14 +11,13 @@ import {
 export const PostTextMatcher = {
   liturgy: "예배 스크립트",
   praise: "찬양 콘티",
-  anthem: "특송 콘티",
   liturgists: "예배 위원회",
   congregation: "예배 인원",
   advertisement: "광고 요청",
   planning: "행사 기획",
   outcome: "행사 결과 보고",
-  newcomer: "새신자 보고",
-  absenteeism: "장결자 보고",
+  newcomer: "새신자 관리",
+  absenteeism: "장결자 관리",
   promotion: "등반 인원 보고",
   manual: "메뉴얼",
   Monthly: "월례회 보고",
@@ -44,6 +43,7 @@ interface ContentMap {
 
 // Discriminated union type for post creation
 export interface CreatePost {
+  id?: string;
   title?: string;
   targetDate?: string;
   boardName: BoardName;
@@ -53,7 +53,7 @@ export interface CreatePost {
 export interface Posts extends CreatePost {
   id: string;
   createdId: string;
-  createdAt: Date;
+  createdAt: string;
   updatedId?: string;
-  updatedAt?: Date;
+  updatedAt?: string;
 }

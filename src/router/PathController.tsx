@@ -9,10 +9,15 @@ import { AccountLayout } from "@/layouts/AccountLayout";
 import { NewsPage } from "@/pages/NewsPage";
 import { ManualPage } from "@/pages/board-sub/ManualPage";
 import { CollegeLeaderReportPage } from "@/pages/board-sub/CollegeLeaderReportPage";
-import { SongPage } from "@/pages/board-sub/SongPage";
 import { BoardPage } from "@/pages/BoardPage";
 import { LiturgyPage } from "@/pages/posts/LiturgyPage";
 import { PraisePage } from "@/pages/posts/PraisePage";
+import { LiturgistsPage } from "@/pages/posts/LiturgistsPage";
+import { CongregationPage } from "@/pages/posts/CongregationPage";
+import { AdvertisementPage } from "@/pages/posts/AdvertisementPage";
+import { NewcomerPage } from "@/pages/posts/NewcomerPage";
+import { AbsenteeismPage } from "@/pages/posts/AbsenteeismPage";
+import { PromotionPage } from "@/pages/posts/PromotionPage";
 
 export const PathController = () => {
   return (
@@ -26,6 +31,31 @@ export const PathController = () => {
         <Route path="/board">
           <Route path="liturgy" element={<LiturgyPage boardId="liturgy" />} />
           <Route path="praise" element={<PraisePage boardId="praise" />} />
+          <Route
+            path="liturgists"
+            element={<LiturgistsPage boardId="liturgists" />}
+          />
+          <Route
+            path="worship-script"
+            element={<CongregationPage boardId="congregation" />}
+          />
+          <Route
+            path="advertisement"
+            element={<AdvertisementPage boardId="advertisement" />}
+          />
+          <Route
+            path="newcomer-individual"
+            element={<NewcomerPage boardId="newcomer" />}
+          />
+          <Route
+            path="newcomer-weekly"
+            element={<AbsenteeismPage boardId="absenteeism" />}
+          />
+
+          <Route
+            path="promotion-report"
+            element={<PromotionPage boardId="promotion" />}
+          />
           {/*  */}
           <Route path="manual" element={<ManualPage boardId="manual" />} />
           <Route
@@ -41,40 +71,12 @@ export const PathController = () => {
             element={<CollegeLeaderReportPage daechung={false} />}
           />
           <Route
-            path="special-song-sheet"
-            element={<SongPage kind={false} boardId="special-song-sheet" />}
-          />
-          <Route
             path="event-plan"
             element={<BoardPage boardId="event-plan" />}
           />
           <Route
             path="event-result"
             element={<BoardPage boardId="event-result" />}
-          />
-          <Route
-            path="newcomer-individual"
-            element={<BoardPage boardId="newcomer-individual" />}
-          />
-          <Route
-            path="newcomer-weekly"
-            element={<BoardPage boardId="newcomer-weekly" />}
-          />
-          <Route
-            path="promotion-report"
-            element={<BoardPage boardId="promotion-report" />}
-          />
-          <Route
-            path="advertisement"
-            element={<BoardPage boardId="advertisement" />}
-          />
-          <Route
-            path="worship-committee"
-            element={<BoardPage boardId="worship-committee" />}
-          />
-          <Route
-            path="worship-script"
-            element={<BoardPage boardId="worship-script" />}
           />
         </Route>
       </Route>

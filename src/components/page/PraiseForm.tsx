@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { TrashIcon, ImageIcon } from "lucide-react";
 import { getPresignedUrl } from "@/apis/minio/images";
 import { ImageViewer } from "./ImageViewr";
+import { Badge } from "../ui/badge";
 
 interface SongItem {
   id: string;
@@ -16,6 +17,7 @@ interface SongItem {
 }
 
 interface Song {
+  id: string;
   title: string;
   lyrics: string;
   images?: SongItem[];
@@ -23,14 +25,17 @@ interface Song {
 }
 
 interface SongItemWithoutImages {
+  kind: "찬양" | "특송" | "봉헌" | "끝송";
   description: string;
   songs: Song[];
 }
 
 const initValue: SongItemWithoutImages = {
+  kind: "찬양",
   description: "",
   songs: [
     {
+      id: Math.random().toString(36).substring(4),
       title: "",
       lyrics: "",
       link: "",
@@ -45,6 +50,8 @@ interface PraiseFormProps {
   userPID: string;
   readonly?: boolean;
 }
+
+const KINDS = ["찬양", "특송", "봉헌", "끝송"] as const;
 
 export const PraiseForm: React.FC<PraiseFormProps> = ({
   initialData = initValue,
@@ -62,6 +69,20 @@ export const PraiseForm: React.FC<PraiseFormProps> = ({
       onSubmit(formData);
     }
   }, [formData, onSubmit, readonly]);
+
+  useEffect(() => {
+    if (readonly) {
+      setFormData(initialData);
+    }
+  }, [readonly, initialData]);
+
+  const handleKindChange = (kind: (typeof KINDS)[number]) => {
+    if (readonly) return;
+    setFormData((prev) => ({
+      ...prev,
+      kind,
+    }));
+  };
 
   const handleDescriptionChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
     if (readonly) return;
@@ -140,7 +161,16 @@ export const PraiseForm: React.FC<PraiseFormProps> = ({
     if (readonly) return;
     setFormData((prev) => ({
       ...prev,
-      songs: [...prev.songs, { title: "", lyrics: "", link: "", images: [] }],
+      songs: [
+        ...prev.songs,
+        {
+          id: Math.random().toString(36).substring(4), // 새로운 곡 추가시 id 부여
+          title: "",
+          lyrics: "",
+          link: "",
+          images: [],
+        },
+      ],
     }));
   };
 
@@ -162,6 +192,24 @@ export const PraiseForm: React.FC<PraiseFormProps> = ({
 
   return (
     <div className="space-y-6 mb-6">
+      {!readonly && (
+        <div className="mb-6">
+          <Label className="mb-2 block">종류</Label>
+          <div className="flex gap-2 flex-wrap">
+            {KINDS.map((kind) => (
+              <Badge
+                key={kind}
+                variant={formData.kind === kind ? "default" : "outline"}
+                className="cursor-pointer hover:bg-primary/90"
+                onClick={() => handleKindChange(kind)}
+              >
+                {kind}
+              </Badge>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="mb-4">
         <Label className="mb-2 block">콘티 설명</Label>
         <Textarea

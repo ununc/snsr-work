@@ -14,6 +14,7 @@ import { useState } from "react";
 
 type SongItemWithoutImages = Omit<Praise, "songs"> & {
   songs: {
+    id: string;
     title: string;
     lyrics: string;
     images?: {
@@ -28,33 +29,17 @@ type SongItemWithoutImages = Omit<Praise, "songs"> & {
 };
 
 const initValue: SongItemWithoutImages = {
+  kind: "찬양",
   description: "", // 말씀 제목
-  songs: [
-    {
+  songs: Array(4)
+    .fill(null)
+    .map(() => ({
+      id: Math.random().toString(36).substring(4), // 고유 id 생성
       title: "",
       lyrics: "",
       link: "",
       images: [],
-    },
-    {
-      title: "",
-      lyrics: "",
-      link: "",
-      images: [],
-    },
-    {
-      title: "",
-      lyrics: "",
-      link: "",
-      images: [],
-    },
-    {
-      title: "",
-      lyrics: "",
-      link: "",
-      images: [],
-    },
-  ],
+    })),
 };
 
 export const PraisePage = ({ boardId }: { boardId: BoardName }) => {
@@ -112,6 +97,7 @@ export const PraisePage = ({ boardId }: { boardId: BoardName }) => {
     });
     try {
       const transformedContent = {
+        kind: newContent.kind,
         description: newContent.description,
         songs: newContent.songs.map((song) => ({
           title: song.title,
@@ -166,44 +152,53 @@ export const PraisePage = ({ boardId }: { boardId: BoardName }) => {
     const originalContent = selectedBoard.content as SongItemWithoutImages;
     const modifiedContent = newContent as SongItemWithoutImages;
 
-    // 각 song을 순회하면서 이미지 변경사항 확인
-    originalContent.songs.forEach((originalSong, songIndex) => {
-      const originalImages = originalSong.images || [];
-      const modifiedImages = modifiedContent.songs[songIndex].images || [];
+    // 원본 songs 순회
+    originalContent.songs.forEach((originalSong) => {
+      // 수정된 content에서 해당 id를 가진 song을 찾음
+      const modifiedSong = modifiedContent.songs.find(
+        (song) => song.id === originalSong.id
+      );
 
-      // 원본 이미지 중 수정된 content에 없는 이미지 찾기 (삭제된 이미지)
-      if (typeof originalImages[0] === "object") {
-        const originalImageObjects = originalImages;
-        originalImageObjects.forEach((originalImage) => {
-          const imageStillExists = modifiedImages.some(
+      // song이 삭제된 경우 - 모든 이미지 삭제
+      if (!modifiedSong && originalSong.images?.length) {
+        originalSong.images.forEach((image) => {
+          deletePromises.push(deleteImage(image.objectName));
+        });
+        return;
+      }
+
+      // song이 존재하는 경우 - 이미지 비교
+      if (modifiedSong && originalSong.images?.length) {
+        originalSong.images.forEach((originalImage) => {
+          const imageStillExists = modifiedSong.images?.some(
             (modifiedImage) => modifiedImage.id === originalImage.id
           );
           if (!imageStillExists) {
-            // 삭제 대상 이미지 발견
+            // 이미지가 삭제된 경우
             deletePromises.push(deleteImage(originalImage.objectName));
           }
         });
       }
+    });
 
-      // 수정된 content의 이미지 중 새로 추가된 이미지 찾기
-      modifiedImages.forEach((modifiedImage) => {
-        if (modifiedImage.file && modifiedImage.uploadUrl) {
-          // 새로 추가된 이미지 발견
-          uploadPromises.push(
-            uploadImage(modifiedImage.uploadUrl as string, modifiedImage.file)
-          );
+    // 새로운 이미지 업로드 처리
+    modifiedContent.songs.forEach((modifiedSong) => {
+      modifiedSong.images?.forEach((image) => {
+        if (image.file && image.uploadUrl) {
+          uploadPromises.push(uploadImage(image.uploadUrl, image.file));
         }
       });
     });
 
     try {
       const transformedContent = {
+        kind: newContent.kind,
         description: modifiedContent.description,
         songs: modifiedContent.songs.map((song) => ({
+          id: song.id,
           title: song.title,
           lyrics: song.lyrics,
           link: song.link,
-          // images 배열을 objectName만 포함하는 string[]로 변환
           images: song.images
             ? song.images
                 .map((img) => img.objectName)
@@ -232,7 +227,6 @@ export const PraisePage = ({ boardId }: { boardId: BoardName }) => {
       setBoardState("detail");
     } catch (error) {
       console.error("Error during edit process:", error);
-      // 에러 처리 로직 추가 (예: 에러 메시지 표시)
     }
   };
 
@@ -302,7 +296,10 @@ export const PraisePage = ({ boardId }: { boardId: BoardName }) => {
                 <CardContent className="p-4">
                   <div className="flex flex-col space-y-3">
                     <div className="flex items-center text-lg font-medium">
-                      <span>{post.targetDate} 찬양 콘티</span>
+                      <span>
+                        {post.targetDate}{" "}
+                        {(post.content as SongItemWithoutImages).kind} 콘티
+                      </span>
                     </div>
 
                     <div className="flex justify-end items-center pt-2 border-t text-sm text-gray-500">
@@ -326,7 +323,10 @@ export const PraisePage = ({ boardId }: { boardId: BoardName }) => {
       <div className="h-4 flex items-center mb-4">
         <Label className="text-xl font-bold">
           {boardState === "detail" && selectedBoard?.targetDate}{" "}
-          {PostTextMatcher[boardId]} {createEditState[boardState]}
+          {boardState === "detail"
+            ? (selectedBoard?.content as Praise)?.kind
+            : PostTextMatcher[boardId]}{" "}
+          {createEditState[boardState]}
         </Label>
       </div>
 
@@ -335,7 +335,8 @@ export const PraisePage = ({ boardId }: { boardId: BoardName }) => {
       <MonthController
         boardState={boardState}
         setBoardState={setBoardState}
-        canEdit={selectedBoard?.createdId === userInfo?.pid}
+        canEdit={canWrite}
+        // canEdit={selectedBoard?.createdId === userInfo?.pid}
         canWrite={canWrite}
         initRequestDate={selectedNewContentDate}
         handleClickEdit={handleClickEdit}
