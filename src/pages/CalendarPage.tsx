@@ -11,6 +11,7 @@ import { Schedule } from "@/components/Schedule";
 import { YearMonth } from "@/components/select/YearMonth";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { useGlobalStore } from "@/stores/global.store";
 
 export const CalendarPage = () => {
   const [currentDate, setCurrentDate] = useState(() => {
@@ -26,6 +27,8 @@ export const CalendarPage = () => {
   const isProcessingRef = useRef(false);
 
   const { toast } = useToast();
+
+  const { roleNames } = useGlobalStore();
 
   const triggerCreate = () => {
     createHandler?.();
@@ -64,7 +67,25 @@ export const CalendarPage = () => {
     }
   };
 
-  const canWrite = true;
+  const checkPermittedRole = (roleNames: { id: string; name: string }[]) => {
+    const directMatches = ["목사님", "대표리더", "관리자"];
+
+    for (const role of roleNames) {
+      // 직접 매칭되는 역할들 체크
+      if (directMatches.includes(role.name)) {
+        return true;
+      }
+
+      // '국장' 키워드가 포함된 경우 체크
+      if (role.name.includes("국장")) {
+        return true;
+      }
+    }
+
+    return false;
+  };
+
+  const canWrite = checkPermittedRole(roleNames ?? []);
 
   useEffect(() => {
     const fetchEvents = async () => {
