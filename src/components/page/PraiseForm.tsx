@@ -3,10 +3,11 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { TrashIcon, ImageIcon } from "lucide-react";
+import { TrashIcon, ImageIcon, CopyIcon } from "lucide-react";
 import { getPresignedUrl } from "@/apis/minio/images";
 import { ImageViewer } from "./ImageViewr";
-import { Badge } from "../ui/badge";
+import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
 
 interface SongItem {
   id: string;
@@ -53,6 +54,13 @@ interface PraiseFormProps {
 
 const KINDS = ["찬양", "특송", "봉헌", "끝송"] as const;
 
+const calculateRows = (text: string) => {
+  if (!text) return 1;
+  const row = (text.match(/\n/g) || []).length + 1;
+  if (row > 12) return 12;
+  return row;
+};
+
 export const PraiseForm: React.FC<PraiseFormProps> = ({
   initialData = initValue,
   onSubmit,
@@ -63,6 +71,7 @@ export const PraiseForm: React.FC<PraiseFormProps> = ({
   const [viewerOpen, setViewerOpen] = useState(false);
   const [selectedSongIndex, setSelectedSongIndex] = useState(0);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const { toast } = useToast();
 
   useEffect(() => {
     if (!readonly) {
@@ -164,7 +173,7 @@ export const PraiseForm: React.FC<PraiseFormProps> = ({
       songs: [
         ...prev.songs,
         {
-          id: Math.random().toString(36).substring(4), // 새로운 곡 추가시 id 부여
+          id: Math.random().toString(36).substring(4),
           title: "",
           lyrics: "",
           link: "",
@@ -239,7 +248,28 @@ export const PraiseForm: React.FC<PraiseFormProps> = ({
           </div>
 
           <div className="mb-4">
-            <Label className="mb-2 block">제목</Label>
+            <div className="flex justify-between items-center mb-2">
+              <Label>제목</Label>
+              {readonly && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 px-2"
+                  onClick={() => {
+                    navigator.clipboard.writeText(song.title);
+                    toast({
+                      title: "복사 완료",
+                      description: "제목이 클립보드에 복사되었습니다.",
+                      duration: 2000,
+                      className: "top-4 right-4 fixed w-54",
+                    });
+                  }}
+                >
+                  <CopyIcon className="w-4 h-4" />
+                </Button>
+              )}
+            </div>
             <Input
               placeholder="곡 제목을 입력하세요"
               value={song.title}
@@ -252,21 +282,63 @@ export const PraiseForm: React.FC<PraiseFormProps> = ({
           </div>
 
           <div className="mb-4">
-            <Label className="mb-2 block">가사</Label>
+            <div className="flex justify-between items-center mb-2">
+              <Label>가사</Label>
+              {readonly && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 px-2"
+                  onClick={() => {
+                    navigator.clipboard.writeText(song.lyrics);
+                    toast({
+                      title: "복사 완료",
+                      description: "가사가 클립보드에 복사되었습니다.",
+                      duration: 2000,
+                      className: "top-4 right-4 fixed w-54",
+                    });
+                  }}
+                >
+                  <CopyIcon className="w-4 h-4" />
+                </Button>
+              )}
+            </div>
             <Textarea
               placeholder="가사를 입력하세요"
               value={song.lyrics}
               onChange={(e) =>
                 handleSongChange(songIndex, "lyrics", e.target.value)
               }
-              rows={4}
+              rows={readonly ? calculateRows(song.lyrics) : 8}
               readOnly={readonly}
               className={readonly ? "bg-gray-50" : ""}
             />
           </div>
 
           <div className="mb-4">
-            <Label className="mb-2 block">링크</Label>
+            <div className="flex justify-between items-center mb-2">
+              <Label>링크</Label>
+              {readonly && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 px-2"
+                  onClick={() => {
+                    navigator.clipboard.writeText(song.link || "");
+                    toast({
+                      title: "복사 완료",
+                      description: "링크가 클립보드에 복사되었습니다.",
+                      duration: 2000,
+                      className: "top-4 right-4 fixed w-54",
+                    });
+                  }}
+                >
+                  <CopyIcon className="w-4 h-4" />
+                </Button>
+              )}
+            </div>
             <Input
               placeholder="링크를 입력하세요"
               value={song.link}
