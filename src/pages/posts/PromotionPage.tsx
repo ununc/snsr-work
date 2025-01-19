@@ -17,7 +17,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useGlobalStore } from "@/stores/global.store";
 import { ChevronRight, ImageIcon } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface Newcomers extends Newcomer {
   preview?: string;
@@ -38,17 +38,31 @@ export const PromotionPage = ({ boardId }: { boardId: BoardName }) => {
   const [boardList, setBoardList] = useState<Posts[]>([]);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [done, setDone] = useState(false);
+  const isProcessingRef = useRef(false);
+
   const { userInfo, getCanWriteByDescription } = useGlobalStore();
   const { toast } = useToast();
 
   const handleClickDetail = async (post: unknown) => {
-    const objectName = ((post as Posts)?.content as Newcomer)?.objectName;
-    if (!(post as Newcomers).preview && objectName) {
-      const url = await getDownloadUrl(objectName);
-      (post as Newcomers).preview = url;
+    if (isProcessingRef.current) return;
+    isProcessingRef.current = true;
+    try {
+      const objectName = ((post as Posts)?.content as Newcomer)?.objectName;
+      if (!(post as Newcomers).preview && objectName) {
+        const url = await getDownloadUrl(objectName);
+        (post as Newcomers).preview = url;
+      }
+      setSelectedPost(post as Post);
+      setBoardState("detail");
+    } catch {
+      toast({
+        title: "요청 실패",
+        variant: "destructive",
+        duration: 2000,
+      });
+    } finally {
+      isProcessingRef.current = false;
     }
-    setSelectedPost(post as Post);
-    setBoardState("detail");
   };
 
   const handleRestore = async (
@@ -56,7 +70,8 @@ export const PromotionPage = ({ boardId }: { boardId: BoardName }) => {
     event: React.MouseEvent<HTMLDivElement, MouseEvent>
   ) => {
     event.stopPropagation();
-    if (!userInfo?.pid) return;
+    if (!userInfo?.pid || isProcessingRef.current) return;
+    isProcessingRef.current = true;
     try {
       await updatePartOfPost(userInfo.pid, {
         id,
@@ -69,6 +84,8 @@ export const PromotionPage = ({ boardId }: { boardId: BoardName }) => {
         variant: "destructive",
         duration: 2000,
       });
+    } finally {
+      isProcessingRef.current = false;
     }
   };
 
@@ -77,7 +94,8 @@ export const PromotionPage = ({ boardId }: { boardId: BoardName }) => {
     event: React.MouseEvent<HTMLDivElement, MouseEvent>
   ) => {
     event.stopPropagation();
-    if (!userInfo?.pid) return;
+    if (!userInfo?.pid || isProcessingRef.current) return;
+    isProcessingRef.current = true;
     try {
       await updatePartOfPost(userInfo.pid, {
         id: post.id,
@@ -91,6 +109,8 @@ export const PromotionPage = ({ boardId }: { boardId: BoardName }) => {
         variant: "destructive",
         duration: 2000,
       });
+    } finally {
+      isProcessingRef.current = false;
     }
   };
 

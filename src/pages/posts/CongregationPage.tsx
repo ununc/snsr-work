@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useGlobalStore } from "@/stores/global.store";
 import { deepCopy } from "@/util/deepCopy";
 import { Pencil } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 const initValue: Congregation = {
   man: 0,
@@ -26,22 +26,21 @@ export const CongregationPage = ({ boardId }: { boardId: BoardName }) => {
   >("list");
   const [boardList, setBoardList] = useState<Posts[]>([]);
   const [selectedBoard, setSelectedBoard] = useState<Posts | null>(null);
-  const [selectedListDate, setSelectedListDate] = useState<Date | null>(null);
+  const [selectedListDate, setSelectedListDate] = useState<Date>(new Date());
   const [newContent, setNewContent] = useState(initValue);
   const [selectedNewContentDate, setSelectedNewContentDate] =
     useState<Date | null>(null);
+  const isProcessingRef = useRef(false);
 
   const { userInfo, getCanWriteByDescription } = useGlobalStore();
   const { toast } = useToast();
 
   const changeYearMonth = async (date: Date) => {
-    if (selectedListDate?.getMonth() !== date?.getMonth()) {
-      setSelectedListDate(date);
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, "0");
-      const result = await getPostList(boardId, `${year}-${month}`);
-      setBoardList(result);
-    }
+    setSelectedListDate(date);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const result = await getPostList(boardId, `${year}-${month}`);
+    setBoardList(result);
   };
 
   const changeRequestYearMonth = (date: Date) => {
@@ -55,11 +54,20 @@ export const CongregationPage = ({ boardId }: { boardId: BoardName }) => {
 
   const handleClickCreate = () => {
     setNewContent(initValue);
+    const date = new Date();
+    const currentDay = date.getDay();
+
+    if (currentDay !== 0) {
+      const daysUntilSunday = 7 - currentDay;
+      date.setDate(date.getDate() + daysUntilSunday);
+    }
+    setSelectedNewContentDate(date);
     setBoardState("create");
   };
 
   const handleClickRequestCreate = async () => {
-    if (!userInfo?.pid) return;
+    if (!userInfo?.pid || isProcessingRef.current) return;
+    isProcessingRef.current = true;
     try {
       const createdPost = await createPost(userInfo.pid, {
         boardName: boardId,
@@ -83,6 +91,8 @@ export const CongregationPage = ({ boardId }: { boardId: BoardName }) => {
         variant: "destructive",
         duration: 2000,
       });
+    } finally {
+      isProcessingRef.current = false;
     }
   };
 
@@ -97,7 +107,8 @@ export const CongregationPage = ({ boardId }: { boardId: BoardName }) => {
   };
 
   const handleClickRequestEdit = async () => {
-    if (!userInfo?.pid || !selectedBoard) return;
+    if (!userInfo?.pid || !selectedBoard || isProcessingRef.current) return;
+    isProcessingRef.current = true;
     try {
       const editedPost = await updatePost(userInfo.pid, {
         ...selectedBoard,
@@ -118,6 +129,8 @@ export const CongregationPage = ({ boardId }: { boardId: BoardName }) => {
         variant: "destructive",
         duration: 2000,
       });
+    } finally {
+      isProcessingRef.current = false;
     }
   };
 
@@ -235,6 +248,7 @@ export const CongregationPage = ({ boardId }: { boardId: BoardName }) => {
 
       <MonthController
         boardState={boardState}
+        initDate={selectedListDate}
         setBoardState={setBoardState}
         canEdit={canWrite}
         canWrite={canWrite}

@@ -26,7 +26,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useGlobalStore } from "@/stores/global.store";
 import { deepCopy } from "@/util/deepCopy";
 import { Clock } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface Newcomers {
   leader: string;
@@ -84,6 +84,7 @@ export const NewcomerPage = ({ boardId }: { boardId: BoardName }) => {
   const [newEdu, setNewEdu] = useState<string[]>([]);
   const [newComment, setNewComment] = useState<string>("");
   const [selectedId, setSelectedId] = useState<string>("");
+  const isProcessingRef = useRef(false);
 
   const { userInfo, getCanWriteByDescription } = useGlobalStore();
   const { toast } = useToast();
@@ -94,161 +95,228 @@ export const NewcomerPage = ({ boardId }: { boardId: BoardName }) => {
   };
 
   const handleStateChange = async (newState: OnlyBoardState, post: Posts) => {
-    switch (newState) {
-      case "edu":
-        setNewEdu((post.content as Newcomers).notes ?? []);
-        setNewComment("");
-        break;
-      case "climbing":
-      case "absence":
-        setNewComment("");
-        break;
-    }
-    if (newState === "edit") {
-      if (!(post.content as Newcomers)?.image) {
-        const image = (post.content as Newcomer)?.objectName;
-        if (image) {
-          const url = await getDownloadUrl(image);
-          (post.content as Newcomers).image = {
-            preview: url,
-            objectName: image,
-          };
+    if (isProcessingRef.current) return;
+    isProcessingRef.current = true;
+
+    try {
+      switch (newState) {
+        case "edu":
+          setNewEdu((post.content as Newcomers).notes ?? []);
+          setNewComment("");
+          break;
+        case "climbing":
+        case "absence":
+          setNewComment("");
+          break;
+      }
+      if (newState === "edit") {
+        if (!(post.content as Newcomers)?.image) {
+          const image = (post.content as Newcomer)?.objectName;
+          if (image) {
+            const url = await getDownloadUrl(image);
+            (post.content as Newcomers).image = {
+              preview: url,
+              objectName: image,
+            };
+          }
         }
       }
+      setSelectedId(post.id);
+      setNewContent({
+        ...(post.content as Newcomers),
+        name: post.title as string,
+        registrationDate: post.targetDate as string,
+      });
+      setBoardState(newState);
+    } catch {
+      toast({
+        title: "이동 실패",
+        variant: "destructive",
+        duration: 2000,
+      });
+    } finally {
+      isProcessingRef.current = false;
     }
-    setSelectedId(post.id);
-    setNewContent({
-      ...(post.content as Newcomers),
-      name: post.title as string,
-      registrationDate: post.targetDate as string,
-    });
-    setBoardState(newState);
   };
 
   const createRequest = async () => {
-    if (!userInfo?.pid) return;
-    let objectName = "";
-    if (newContent.image?.uploadUrl && newContent.image?.file) {
-      objectName = newContent.image.objectName;
-      await uploadImage(newContent.image.uploadUrl, newContent.image.file);
-    }
+    if (!userInfo?.pid || isProcessingRef.current) return;
+    isProcessingRef.current = true;
 
-    const item = deepCopy(newContent);
-    const title = item.name;
-    const targetDate = item.registrationDate;
+    try {
+      let objectName = "";
+      if (newContent.image?.uploadUrl && newContent.image?.file) {
+        objectName = newContent.image.objectName;
+        await uploadImage(newContent.image.uploadUrl, newContent.image.file);
+      }
 
-    delete item.registrationDate;
-    delete item.name;
-    delete item.image;
+      const item = deepCopy(newContent);
+      const title = item.name;
+      const targetDate = item.registrationDate;
 
-    const createdPost = await createPost(userInfo.pid, {
-      boardName: boardId,
-      title,
-      targetDate,
-      content: { ...item, objectName },
-    });
+      delete item.registrationDate;
+      delete item.name;
+      delete item.image;
 
-    setBoardList((prev) => {
-      const newList = [createdPost, ...prev];
-      return newList.sort((a, b) => {
-        const dateA = new Date(a.createdAt).getTime();
-        const dateB = new Date(b.createdAt).getTime();
-        return dateA - dateB;
+      const createdPost = await createPost(userInfo.pid, {
+        boardName: boardId,
+        title,
+        targetDate,
+        content: { ...item, objectName },
       });
-    });
+
+      setBoardList((prev) => {
+        const newList = [createdPost, ...prev];
+        return newList.sort((a, b) => {
+          const dateA = new Date(a.createdAt).getTime();
+          const dateB = new Date(b.createdAt).getTime();
+          return dateA - dateB;
+        });
+      });
+    } catch {
+      toast({
+        title: "생성 실패",
+        variant: "destructive",
+        duration: 2000,
+      });
+    } finally {
+      isProcessingRef.current = false;
+    }
   };
 
   const editRequest = async () => {
-    if (!userInfo?.pid) return;
-    const imageProcessPromises: Promise<void>[] = [];
-    let objectName = (newContent as Newcomer).objectName ?? "";
-    if (newContent.image?.uploadUrl && newContent.image?.file) {
-      if (objectName) {
+    if (!userInfo?.pid || isProcessingRef.current) return;
+    isProcessingRef.current = true;
+    try {
+      const imageProcessPromises: Promise<void>[] = [];
+      let objectName = (newContent as Newcomer).objectName ?? "";
+      if (newContent.image?.uploadUrl && newContent.image?.file) {
+        if (objectName) {
+          imageProcessPromises.push(
+            deleteImage((newContent as Newcomer).objectName as string)
+          );
+        }
+        objectName = newContent.image.objectName;
         imageProcessPromises.push(
-          deleteImage((newContent as Newcomer).objectName as string)
+          uploadImage(newContent.image.uploadUrl, newContent.image.file)
         );
       }
-      objectName = newContent.image.objectName;
-      imageProcessPromises.push(
-        uploadImage(newContent.image.uploadUrl, newContent.image.file)
+      await Promise.all(imageProcessPromises);
+
+      const item = deepCopy(newContent);
+      const title = item.name;
+      const targetDate = item.registrationDate;
+
+      delete item.registrationDate;
+      delete item.name;
+      delete item.image;
+
+      const editedPost = await updatePartOfPost(userInfo.pid, {
+        id: selectedId,
+        title,
+        targetDate,
+        content: { ...item, objectName },
+      });
+
+      setBoardList((prev) =>
+        prev.map((item) => (item.id === editedPost.id ? editedPost : item))
       );
+    } catch {
+      toast({
+        title: "생성 실패",
+        variant: "destructive",
+        duration: 2000,
+      });
+    } finally {
+      isProcessingRef.current = false;
     }
-    await Promise.all(imageProcessPromises);
-
-    const item = deepCopy(newContent);
-    const title = item.name;
-    const targetDate = item.registrationDate;
-
-    delete item.registrationDate;
-    delete item.name;
-    delete item.image;
-
-    const editedPost = await updatePartOfPost(userInfo.pid, {
-      id: selectedId,
-      title,
-      targetDate,
-      content: { ...item, objectName },
-    });
-
-    setBoardList((prev) =>
-      prev.map((item) => (item.id === editedPost.id ? editedPost : item))
-    );
   };
 
   const eduRequest = async () => {
-    if (!userInfo?.pid) return;
+    if (!userInfo?.pid || isProcessingRef.current) return;
+    isProcessingRef.current = true;
 
-    const item = deepCopy(newContent);
+    try {
+      const item = deepCopy(newContent);
 
-    delete item.registrationDate;
-    delete item.name;
-    delete item.image;
+      delete item.registrationDate;
+      delete item.name;
+      delete item.image;
 
-    const editedPost = await updatePartOfPost(userInfo.pid, {
-      id: selectedId,
-      boardName: "newcomer",
-      content: { ...item, notes: [...newEdu, newComment] },
-    });
+      const editedPost = await updatePartOfPost(userInfo.pid, {
+        id: selectedId,
+        boardName: "newcomer",
+        content: { ...item, notes: [...newEdu, newComment] },
+      });
 
-    setBoardList((prev) =>
-      prev.map((item) => (item.id === editedPost.id ? editedPost : item))
-    );
+      setBoardList((prev) =>
+        prev.map((item) => (item.id === editedPost.id ? editedPost : item))
+      );
+    } catch {
+      toast({
+        title: "요청 실패",
+        variant: "destructive",
+        duration: 2000,
+      });
+    } finally {
+      isProcessingRef.current = false;
+    }
   };
 
   const climbingRequest = async () => {
-    if (!userInfo?.pid) return;
+    if (!userInfo?.pid || isProcessingRef.current) return;
+    isProcessingRef.current = true;
+    try {
+      const item = deepCopy(newContent);
 
-    const item = deepCopy(newContent);
+      delete item.registrationDate;
+      delete item.name;
+      delete item.image;
 
-    delete item.registrationDate;
-    delete item.name;
-    delete item.image;
+      const editedPost = await updatePartOfPost(userInfo.pid, {
+        id: selectedId,
+        boardName: "promotion",
+        content: { ...item, climbing: newComment, absence: "" },
+      });
 
-    const editedPost = await updatePartOfPost(userInfo.pid, {
-      id: selectedId,
-      boardName: "promotion",
-      content: { ...item, climbing: newComment, absence: "" },
-    });
-
-    setBoardList((prev) => prev.filter((item) => item.id !== editedPost.id));
+      setBoardList((prev) => prev.filter((item) => item.id !== editedPost.id));
+    } catch {
+      toast({
+        title: "요청 실패",
+        variant: "destructive",
+        duration: 2000,
+      });
+    } finally {
+      isProcessingRef.current = false;
+    }
   };
 
   const absenceRequest = async () => {
-    if (!userInfo?.pid) return;
+    if (!userInfo?.pid || isProcessingRef.current) return;
+    isProcessingRef.current = true;
+    try {
+      const item = deepCopy(newContent);
 
-    const item = deepCopy(newContent);
+      delete item.registrationDate;
+      delete item.name;
+      delete item.image;
 
-    delete item.registrationDate;
-    delete item.name;
-    delete item.image;
+      const editedPost = await updatePartOfPost(userInfo.pid, {
+        id: selectedId,
+        boardName: "absenteeism",
+        content: { ...item, climbing: "", absence: newComment },
+      });
 
-    const editedPost = await updatePartOfPost(userInfo.pid, {
-      id: selectedId,
-      boardName: "absenteeism",
-      content: { ...item, climbing: "", absence: newComment },
-    });
-
-    setBoardList((prev) => prev.filter((item) => item.id !== editedPost.id));
+      setBoardList((prev) => prev.filter((item) => item.id !== editedPost.id));
+    } catch {
+      toast({
+        title: "요청 실패",
+        variant: "destructive",
+        duration: 2000,
+      });
+    } finally {
+      isProcessingRef.current = false;
+    }
   };
 
   const handleRequest = () => {

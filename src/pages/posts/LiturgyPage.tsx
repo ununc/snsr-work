@@ -11,7 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useGlobalStore } from "@/stores/global.store";
 import { deepCopy } from "@/util/deepCopy";
 import { Book, Clock } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 interface LiturgyWithoutImages {
   preach: string;
@@ -41,22 +41,21 @@ export const LiturgyPage = ({ boardId }: { boardId: BoardName }) => {
   >("list");
   const [boardList, setBoardList] = useState<Posts[]>([]);
   const [selectedBoard, setSelectedBoard] = useState<Posts | null>(null);
-  const [selectedListDate, setSelectedListDate] = useState<Date | null>(null);
+  const [selectedListDate, setSelectedListDate] = useState<Date>(new Date());
   const [newContent, setNewContent] = useState(initValue);
   const [selectedNewContentDate, setSelectedNewContentDate] =
     useState<Date | null>(null);
+  const isProcessingRef = useRef(false);
 
   const { userInfo, getCanWriteByDescription } = useGlobalStore();
   const { toast } = useToast();
 
   const changeYearMonth = async (date: Date) => {
-    if (selectedListDate?.getMonth() !== date?.getMonth()) {
-      setSelectedListDate(date);
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, "0");
-      const result = await getPostList(boardId, `${year}-${month}`);
-      setBoardList(result);
-    }
+    setSelectedListDate(date);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const result = await getPostList(boardId, `${year}-${month}`);
+    setBoardList(result);
   };
 
   const changeRequestYearMonth = (date: Date) => {
@@ -70,20 +69,29 @@ export const LiturgyPage = ({ boardId }: { boardId: BoardName }) => {
 
   const handleClickCreate = () => {
     setNewContent(initValue);
+    const date = new Date();
+    const currentDay = date.getDay();
+
+    if (currentDay !== 0) {
+      const daysUntilSunday = 7 - currentDay;
+      date.setDate(date.getDate() + daysUntilSunday);
+    }
+    setSelectedNewContentDate(date);
     setBoardState("create");
   };
 
   const handleClickRequestCreate = async () => {
-    if (!userInfo?.pid) return;
-
-    const uploadPromises: Promise<void>[] = [];
-    newContent.images?.forEach((image) => {
-      if (image.objectName && image.file) {
-        uploadPromises.push(uploadImage(image.uploadUrl as string, image.file));
-      }
-    });
-
+    if (!userInfo?.pid || isProcessingRef.current) return;
+    isProcessingRef.current = true;
     try {
+      const uploadPromises: Promise<void>[] = [];
+      newContent.images?.forEach((image) => {
+        if (image.objectName && image.file) {
+          uploadPromises.push(
+            uploadImage(image.uploadUrl as string, image.file)
+          );
+        }
+      });
       await Promise.all(uploadPromises);
       const transformedContent = {
         ...newContent,
@@ -114,10 +122,12 @@ export const LiturgyPage = ({ boardId }: { boardId: BoardName }) => {
         variant: "destructive",
         duration: 2000,
       });
+    } finally {
+      isProcessingRef.current = false;
     }
   };
 
-  const handleClickEdit = async () => {
+  const handleClickEdit = () => {
     if (!selectedBoard?.targetDate) return;
     const newContent = deepCopy(selectedBoard.content as LiturgyWithoutImages);
     setNewContent(newContent);
@@ -126,36 +136,35 @@ export const LiturgyPage = ({ boardId }: { boardId: BoardName }) => {
   };
 
   const handleClickRequestEdit = async () => {
-    if (!userInfo?.pid || !selectedBoard) return;
-
-    const uploadPromises: Promise<void>[] = [];
-    const deletePromises: Promise<void>[] = [];
-
-    const originalContent = selectedBoard.content as LiturgyWithoutImages;
-    const modifiedContent = newContent;
-
-    // Handle image changes
-    const originalImages = originalContent.images || [];
-    const modifiedImages = modifiedContent.images || [];
-
-    originalImages.forEach((originalImage) => {
-      const imageStillExists = modifiedImages.some(
-        (modifiedImage) => modifiedImage.id === originalImage.id
-      );
-      if (!imageStillExists) {
-        deletePromises.push(deleteImage(originalImage.objectName));
-      }
-    });
-
-    modifiedImages.forEach((modifiedImage) => {
-      if (modifiedImage.file && modifiedImage.uploadUrl) {
-        uploadPromises.push(
-          uploadImage(modifiedImage.uploadUrl, modifiedImage.file)
-        );
-      }
-    });
-
+    if (!userInfo?.pid || !selectedBoard || isProcessingRef.current) return;
+    isProcessingRef.current = true;
     try {
+      const uploadPromises: Promise<void>[] = [];
+      const deletePromises: Promise<void>[] = [];
+
+      const originalContent = selectedBoard.content as LiturgyWithoutImages;
+      const modifiedContent = newContent;
+
+      // Handle image changes
+      const originalImages = originalContent.images || [];
+      const modifiedImages = modifiedContent.images || [];
+
+      originalImages.forEach((originalImage) => {
+        const imageStillExists = modifiedImages.some(
+          (modifiedImage) => modifiedImage.id === originalImage.id
+        );
+        if (!imageStillExists) {
+          deletePromises.push(deleteImage(originalImage.objectName));
+        }
+      });
+
+      modifiedImages.forEach((modifiedImage) => {
+        if (modifiedImage.file && modifiedImage.uploadUrl) {
+          uploadPromises.push(
+            uploadImage(modifiedImage.uploadUrl, modifiedImage.file)
+          );
+        }
+      });
       const transformedContent = {
         ...modifiedContent,
         images: modifiedImages.map((img) => img.objectName).filter(Boolean),
@@ -183,26 +192,40 @@ export const LiturgyPage = ({ boardId }: { boardId: BoardName }) => {
         variant: "destructive",
         duration: 2000,
       });
+    } finally {
+      isProcessingRef.current = false;
     }
   };
 
   const handleItemDetail = async (post: Posts) => {
-    const content = post.content as Liturgy;
-    if (content?.images?.length) {
-      const downloadUrls = await Promise.all(
-        content.images.map((objectName) => getDownloadUrl(objectName))
-      );
+    if (isProcessingRef.current) return;
+    isProcessingRef.current = true;
+    try {
+      const content = post.content as Liturgy;
+      if (content?.images?.length) {
+        const downloadUrls = await Promise.all(
+          content.images.map((objectName) => getDownloadUrl(objectName))
+        );
 
-      (post.content as LiturgyWithoutImages).images = downloadUrls.map(
-        (preview, index) => ({
-          id: Math.random().toString(36).substring(4),
-          preview,
-          objectName: content.images![index],
-        })
-      );
+        (post.content as LiturgyWithoutImages).images = downloadUrls.map(
+          (preview, index) => ({
+            id: Math.random().toString(36).substring(4),
+            preview,
+            objectName: content.images![index],
+          })
+        );
+      }
+      setSelectedBoard(post);
+      setBoardState("detail");
+    } catch {
+      toast({
+        title: "게시글 가져오기 실패",
+        variant: "destructive",
+        duration: 2000,
+      });
+    } finally {
+      isProcessingRef.current = false;
     }
-    setSelectedBoard(post);
-    setBoardState("detail");
   };
 
   const renderContent = () => {
@@ -281,6 +304,7 @@ export const LiturgyPage = ({ boardId }: { boardId: BoardName }) => {
 
       <MonthController
         boardState={boardState}
+        initDate={selectedListDate}
         setBoardState={setBoardState}
         canEdit={selectedBoard?.createdId === userInfo?.pid}
         canWrite={canWrite}

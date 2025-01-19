@@ -1,147 +1,107 @@
-import React, { useState, useRef, useEffect } from "react";
-import { Calendar } from "@/components/Calendar";
+import { useState, useEffect, useRef } from "react";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { getEvents } from "@/apis/calendar/calendar";
 
-type Event = {
-  id: number;
-  year: number;
-  month: number;
-  day: number;
-  period: number;
-  title: string;
-  content: string;
-  target_group: number;
-  write_group: number;
-  writer: string;
-};
+import {
+  createEvent,
+  editEvent,
+  getEvents,
+  ScheduleEvent,
+} from "@/apis/calendar/calendar";
+import { Schedule } from "@/components/Schedule";
+import { YearMonth } from "@/components/select/YearMonth";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 
 export const CalendarPage = () => {
-  const currentDate = new Date();
-  const currentYear = new Date().getFullYear();
-  const [year, setYear] = useState(currentYear);
-  const [month, setMonth] = useState(currentDate.getMonth() + 1);
-  const touchStartY = useRef<number | null>(null);
+  const [currentDate, setCurrentDate] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(
+      2,
+      "0"
+    )}`;
+  });
+  const [events, setEvents] = useState<ScheduleEvent[]>([]);
 
-  const minYear = currentYear - 1;
-  const maxYear = currentYear + 1;
-  const years = Array.from(
-    { length: maxYear - minYear + 1 },
-    (_, i) => minYear + i
-  );
+  const [createHandler, setCreateHandler] = useState<(() => void) | null>(null);
+  const isProcessingRef = useRef(false);
 
-  const handleTouchStart = (e: React.TouchEvent) => {
-    touchStartY.current = e.touches[0].clientY;
+  const { toast } = useToast();
+
+  const triggerCreate = () => {
+    createHandler?.();
   };
 
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    if (!touchStartY.current) return;
+  const changeYearMonth = (date: Date) => {
+    const now = new Date(date);
+    setCurrentDate(
+      `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`
+    );
+  };
 
-    const touchEndY = e.changedTouches[0].clientY;
-    const diff = touchStartY.current - touchEndY;
-
-    // 50px 이상의 스와이프만 처리
-    if (Math.abs(diff) > 50) {
-      if (diff > 0) {
-        // 위로 스와이프: 다음 달
-        if (month === 12) {
-          // 다음 연도가 최대 연도를 넘지 않을 때만 변경
-          if (year < maxYear) {
-            setYear(year + 1);
-            setMonth(1);
-          }
-        } else {
-          setMonth(month + 1);
-        }
+  const requestSchedule = async (state: boolean, schedule: ScheduleEvent) => {
+    if (isProcessingRef.current) return;
+    isProcessingRef.current = true;
+    try {
+      if (state) {
+        const createdEvent = await createEvent(schedule);
+        setEvents((prev) => [...prev, createdEvent]);
       } else {
-        // 아래로 스와이프: 이전 달
-        if (month === 1) {
-          // 이전 연도가 최소 연도보다 크거나 같을 때만 변경
-          if (year > minYear) {
-            setYear(year - 1);
-            setMonth(12);
-          }
-        } else {
-          setMonth(month - 1);
-        }
+        const updatedEvent = await editEvent(schedule);
+        setEvents((prev) =>
+          prev.map((event) =>
+            event.id === updatedEvent.id ? updatedEvent : event
+          )
+        );
       }
+    } catch {
+      toast({
+        title: "스케쥴 요청 실패",
+        variant: "destructive",
+        duration: 2000,
+      });
+    } finally {
+      isProcessingRef.current = false;
     }
-    touchStartY.current = null;
   };
 
-  const months = Array.from({ length: 12 }, (_, i) => i + 1);
-
-  const [events, setEvents] = useState<Event[]>([]);
+  const canWrite = true;
 
   useEffect(() => {
-    const getEvent = async () => {
+    const fetchEvents = async () => {
+      const [year, month] = currentDate.split("-");
       try {
-        const response = await getEvents({ year, month });
-        setEvents(response);
-      } catch {
-        setEvents([]);
+        const eventList = await getEvents(year, month);
+        setEvents(eventList);
+      } catch (error) {
+        console.error("Failed to fetch events:", error);
       }
     };
-    getEvent();
-  }, [year, month]);
+
+    fetchEvents();
+  }, [currentDate]);
 
   return (
     <div className="page-wrapper">
       <div className="h-9 flex items-center">
         <Label className="text-xl font-bold">대학 청년부 일정</Label>
       </div>
-      <div className="flex gap-4 mb-4 mt-2">
-        <div className="flex items-center gap-2">
-          <Label>연도:</Label>
-          <Select
-            value={year.toString()}
-            onValueChange={(value) => setYear(Number(value))}
-          >
-            <SelectTrigger className="w-24">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {years.map((y) => (
-                <SelectItem key={y} value={y.toString()}>
-                  {y}년
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="flex items-center gap-2">
-          <Label>월:</Label>
-          <Select
-            value={month.toString()}
-            onValueChange={(value) => setMonth(Number(value))}
-          >
-            <SelectTrigger className="w-20">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {months.map((m) => (
-                <SelectItem key={m} value={m.toString()}>
-                  {m}월
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
 
-      <div
-        className="page-body"
-        onTouchStart={handleTouchStart}
-        onTouchEnd={handleTouchEnd}
-      >
-        <Calendar year={year} month={month} events={events} />
+      <div className="page-body mb-2 px-0.5">
+        <Schedule
+          events={events}
+          currentDate={currentDate}
+          onMonthChange={setCurrentDate}
+          canWrite={true}
+          setCreateHandler={setCreateHandler}
+          requestSchedule={requestSchedule}
+        />
+      </div>
+      <div className="flex justify-between items-center">
+        <YearMonth
+          changeYearMonth={changeYearMonth}
+          initDate={new Date(currentDate)}
+        />
+        {canWrite && <Button onClick={triggerCreate}>작성하기</Button>}
       </div>
     </div>
   );

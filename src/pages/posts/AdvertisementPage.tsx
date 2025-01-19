@@ -15,7 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useGlobalStore } from "@/stores/global.store";
 import { deepCopy } from "@/util/deepCopy";
 import { Clock } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 interface ContentItem {
   id: string;
@@ -46,8 +46,9 @@ export const AdvertisementPage = ({ boardId }: { boardId: BoardName }) => {
 
   const [boardList, setBoardList] = useState<Posts[]>([]);
   const [selectedBoard, setSelectedBoard] = useState<Posts | null>(null);
-  const [selectedListDate, setSelectedListDate] = useState<Date | null>(null);
+  const [selectedListDate, setSelectedListDate] = useState<Date>(new Date());
   const [newContent, setNewContent] = useState(initValue);
+  const isProcessingRef = useRef(false);
 
   const { userInfo, getCanWriteByDescription } = useGlobalStore();
   const { toast } = useToast();
@@ -63,13 +64,11 @@ export const AdvertisementPage = ({ boardId }: { boardId: BoardName }) => {
   };
 
   const changeYearMonth = async (date: Date) => {
-    if (selectedListDate?.getMonth() !== date?.getMonth()) {
-      setSelectedListDate(date);
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, "0");
-      const result = await getAdvertisementList(`${year}-${month}`);
-      setBoardList(result);
-    }
+    setSelectedListDate(date);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const result = await getAdvertisementList(`${year}-${month}`);
+    setBoardList(result);
   };
 
   const changeRequestYearMonth = () => {};
@@ -80,7 +79,6 @@ export const AdvertisementPage = ({ boardId }: { boardId: BoardName }) => {
   };
 
   const handleClickRequestCreate = async () => {
-    if (!userInfo?.pid) return;
     if (isEmpty(newContent)) {
       toast({
         title: "빈 필드가 존재합니다.",
@@ -89,16 +87,19 @@ export const AdvertisementPage = ({ boardId }: { boardId: BoardName }) => {
       });
       return;
     }
-    const uploadPromises: Promise<void>[] = [];
 
-    // 모든 컨텐츠에 대한 업로드 처리
-    newContent.contents.forEach((content) => {
-      if (content.uploadUrl && content.file) {
-        uploadPromises.push(uploadImage(content.uploadUrl, content.file));
-      }
-    });
+    if (!userInfo?.pid || isProcessingRef.current) return;
+    isProcessingRef.current = true;
 
     try {
+      const uploadPromises: Promise<void>[] = [];
+
+      // 모든 컨텐츠에 대한 업로드 처리
+      newContent.contents.forEach((content) => {
+        if (content.uploadUrl && content.file) {
+          uploadPromises.push(uploadImage(content.uploadUrl, content.file));
+        }
+      });
       const transformedContent = {
         description: newContent.description,
         startDate: newContent.startDate,
@@ -129,10 +130,12 @@ export const AdvertisementPage = ({ boardId }: { boardId: BoardName }) => {
       setBoardState("list");
     } catch (error) {
       console.error("광고 생성 실패:", error);
+    } finally {
+      isProcessingRef.current = false;
     }
   };
 
-  const handleClickEdit = async () => {
+  const handleClickEdit = () => {
     if (!selectedBoard) return;
     const newContent = deepCopy(selectedBoard.content as Advertisements);
     setNewContent({ ...newContent, title: selectedBoard.title as string });
@@ -140,7 +143,6 @@ export const AdvertisementPage = ({ boardId }: { boardId: BoardName }) => {
   };
 
   const handleClickRequestEdit = async () => {
-    if (!userInfo?.pid || !selectedBoard) return;
     if (isEmpty(newContent)) {
       toast({
         title: "빈 필드가 존재합니다.",
@@ -149,30 +151,31 @@ export const AdvertisementPage = ({ boardId }: { boardId: BoardName }) => {
       });
       return;
     }
-    const uploadPromises: Promise<void>[] = [];
-    const deletePromises: Promise<void>[] = [];
-
-    const originalContent = selectedBoard.content as Advertisement;
-    const modifiedContent = newContent;
-
-    // 삭제된 컨텐츠 처리
-    originalContent.contents.forEach((original) => {
-      const contentStillExists = modifiedContent.contents.some(
-        (content) => content.objectPath === original.objectPath
-      );
-      if (!contentStillExists) {
-        deletePromises.push(deleteImage(original.objectPath));
-      }
-    });
-
-    // 새로운 컨텐츠 업로드 처리
-    modifiedContent.contents.forEach((content) => {
-      if (content.file && content.uploadUrl) {
-        uploadPromises.push(uploadImage(content.uploadUrl, content.file));
-      }
-    });
-
+    if (!userInfo?.pid || !selectedBoard || isProcessingRef.current) return;
+    isProcessingRef.current = true;
     try {
+      const uploadPromises: Promise<void>[] = [];
+      const deletePromises: Promise<void>[] = [];
+
+      const originalContent = selectedBoard.content as Advertisement;
+      const modifiedContent = newContent;
+
+      // 삭제된 컨텐츠 처리
+      originalContent.contents.forEach((original) => {
+        const contentStillExists = modifiedContent.contents.some(
+          (content) => content.objectPath === original.objectPath
+        );
+        if (!contentStillExists) {
+          deletePromises.push(deleteImage(original.objectPath));
+        }
+      });
+
+      // 새로운 컨텐츠 업로드 처리
+      modifiedContent.contents.forEach((content) => {
+        if (content.file && content.uploadUrl) {
+          uploadPromises.push(uploadImage(content.uploadUrl, content.file));
+        }
+      });
       const transformedContent = {
         description: modifiedContent.description,
         startDate: modifiedContent.startDate,
@@ -202,40 +205,56 @@ export const AdvertisementPage = ({ boardId }: { boardId: BoardName }) => {
       setBoardState("detail");
     } catch (error) {
       console.error("광고 수정 실패:", error);
+    } finally {
+      isProcessingRef.current = false;
     }
   };
 
   const handleItemDetail = async (post: Posts) => {
-    const content = post.content as Advertisement;
+    if (isProcessingRef.current) return;
+    isProcessingRef.current = true;
+    try {
+      const content = post.content as Advertisement;
 
-    // contents 배열의 각 항목에 대해 다운로드 URL 가져오기
-    if (content.contents && content.contents.length > 0) {
-      const downloadUrlPromises = content.contents.map((object) =>
-        getDownloadUrl(object.objectPath)
-      );
-      const downloadUrls = await Promise.all(downloadUrlPromises);
+      // contents 배열의 각 항목에 대해 다운로드 URL 가져오기
+      if (content.contents && content.contents.length > 0) {
+        const downloadUrlPromises = content.contents.map((object) =>
+          getDownloadUrl(object.objectPath)
+        );
+        const downloadUrls = await Promise.all(downloadUrlPromises);
 
-      // 새로운 ContentItem 배열 생성
-      const newContents: ContentItem[] = downloadUrls.map((preview, index) => ({
-        id: Math.random().toString(36).substring(4),
-        type: content.contents[index].type, // 파일 확장자로 타입 추정
-        objectPath: content.contents[index].objectPath,
-        preview,
-      }));
+        // 새로운 ContentItem 배열 생성
+        const newContents: ContentItem[] = downloadUrls.map(
+          (preview, index) => ({
+            id: Math.random().toString(36).substring(4),
+            type: content.contents[index].type, // 파일 확장자로 타입 추정
+            objectPath: content.contents[index].objectPath,
+            preview,
+          })
+        );
 
-      const contentWithPreviews = {
-        ...content,
-        contents: newContents,
-      };
+        const contentWithPreviews = {
+          ...content,
+          contents: newContents,
+        };
 
-      setSelectedBoard({
-        ...post,
-        content: contentWithPreviews,
+        setSelectedBoard({
+          ...post,
+          content: contentWithPreviews,
+        });
+      } else {
+        setSelectedBoard(post);
+      }
+      setBoardState("detail");
+    } catch {
+      toast({
+        title: "게시글 가져오기 실패",
+        variant: "destructive",
+        duration: 2000,
       });
-    } else {
-      setSelectedBoard(post);
+    } finally {
+      isProcessingRef.current = false;
     }
-    setBoardState("detail");
   };
 
   const renderContent = () => {
@@ -312,6 +331,7 @@ export const AdvertisementPage = ({ boardId }: { boardId: BoardName }) => {
 
       <MonthController
         boardState={boardState}
+        initDate={selectedListDate}
         setBoardState={setBoardState}
         canEdit={selectedBoard?.createdId === userInfo?.pid}
         canWrite={canWrite}

@@ -21,7 +21,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useGlobalStore } from "@/stores/global.store";
 import { ChevronRight, Clock, ImageIcon } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface Newcomers extends Newcomer {
   preview?: string;
@@ -41,6 +41,7 @@ export const AbsenteeismPage = ({ boardId }: { boardId: BoardName }) => {
   const [boardState, setBoardState] = useState<"list" | "detail">("list");
   const [boardList, setBoardList] = useState<Posts[]>([]);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+  const isProcessingRef = useRef(false);
 
   const { userInfo, getCanWriteByDescription } = useGlobalStore();
   const { toast } = useToast();
@@ -56,7 +57,8 @@ export const AbsenteeismPage = ({ boardId }: { boardId: BoardName }) => {
   };
 
   const handleRestore = async (id: string) => {
-    if (!userInfo?.pid) return;
+    if (!userInfo?.pid || isProcessingRef.current) return;
+    isProcessingRef.current = true;
     try {
       await updatePartOfPost(userInfo.pid, {
         id,
@@ -69,10 +71,14 @@ export const AbsenteeismPage = ({ boardId }: { boardId: BoardName }) => {
         variant: "destructive",
         duration: 2000,
       });
+    } finally {
+      isProcessingRef.current = false;
     }
   };
 
   const handleDelete = async (id: string) => {
+    if (isProcessingRef.current) return;
+    isProcessingRef.current = true;
     try {
       await deletePost(id);
       setBoardList((prev) => prev.filter((item) => item.id !== id));
@@ -82,6 +88,8 @@ export const AbsenteeismPage = ({ boardId }: { boardId: BoardName }) => {
         variant: "destructive",
         duration: 2000,
       });
+    } finally {
+      isProcessingRef.current = false;
     }
   };
 

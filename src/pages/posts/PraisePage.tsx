@@ -10,7 +10,7 @@ import { createEditState } from "@/etc/routeWord";
 import { useGlobalStore } from "@/stores/global.store";
 import { deepCopy } from "@/util/deepCopy";
 import { Clock } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 type SongItemWithoutImages = Omit<Praise, "songs"> & {
   songs: {
@@ -49,23 +49,20 @@ export const PraisePage = ({ boardId }: { boardId: BoardName }) => {
 
   const [boardList, setBoardList] = useState<Posts[]>([]);
   const [selectedBoard, setSelectedBoard] = useState<Posts | null>(null);
-
-  const [selectedListDate, setSelectedListDate] = useState<Date | null>(null);
-
+  const [selectedListDate, setSelectedListDate] = useState<Date>(new Date());
   const [newContent, setNewContent] = useState(initValue);
   const [selectedNewContentDate, setSelectedNewContentDate] =
     useState<Date | null>(null);
+  const isProcessingRef = useRef(false);
 
   const { userInfo, getCanWriteByDescription } = useGlobalStore();
 
   const changeYearMonth = async (date: Date) => {
-    if (selectedListDate?.getMonth() !== date?.getMonth()) {
-      setSelectedListDate(date);
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, "0");
-      const result = await getPostList(boardId, `${year}-${month}`);
-      setBoardList(result);
-    }
+    setSelectedListDate(date);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const result = await getPostList(boardId, `${year}-${month}`);
+    setBoardList(result);
   };
 
   const changeRequestYearMonth = (date: Date) => {
@@ -79,23 +76,32 @@ export const PraisePage = ({ boardId }: { boardId: BoardName }) => {
 
   const handleClickCreate = () => {
     setNewContent(initValue);
+    const date = new Date();
+    const currentDay = date.getDay();
+
+    if (currentDay !== 0) {
+      const daysUntilSunday = 7 - currentDay;
+      date.setDate(date.getDate() + daysUntilSunday);
+    }
+    setSelectedNewContentDate(date);
     setBoardState("create");
   };
 
   const handleClickRequestCreate = async () => {
-    if (!userInfo?.pid) return;
-    const uploadPromises: Promise<void>[] = [];
-
-    newContent.songs.forEach((song) => {
-      song.images?.forEach((image) => {
-        if (image.objectName && image.file) {
-          uploadPromises.push(
-            uploadImage(image.uploadUrl as string, image.file)
-          );
-        }
-      });
-    });
+    if (!userInfo?.pid || isProcessingRef.current) return;
+    isProcessingRef.current = true;
     try {
+      const uploadPromises: Promise<void>[] = [];
+
+      newContent.songs.forEach((song) => {
+        song.images?.forEach((image) => {
+          if (image.objectName && image.file) {
+            uploadPromises.push(
+              uploadImage(image.uploadUrl as string, image.file)
+            );
+          }
+        });
+      });
       const transformedContent = {
         kind: newContent.kind,
         description: newContent.description,
@@ -132,10 +138,12 @@ export const PraisePage = ({ boardId }: { boardId: BoardName }) => {
       setBoardState("list");
     } catch {
       console.error("요청 실패");
+    } finally {
+      isProcessingRef.current = false;
     }
   };
 
-  const handleClickEdit = async () => {
+  const handleClickEdit = () => {
     if (!selectedBoard?.targetDate) return;
     // 선택된 아이템 할당하고
     const newContent = deepCopy(selectedBoard.content as SongItemWithoutImages);
@@ -145,52 +153,52 @@ export const PraisePage = ({ boardId }: { boardId: BoardName }) => {
   };
 
   const handleClickRequestEdit = async () => {
-    if (!userInfo?.pid || !selectedBoard) return;
-    const uploadPromises: Promise<void>[] = [];
-    const deletePromises: Promise<void>[] = [];
+    if (!userInfo?.pid || !selectedBoard || isProcessingRef.current) return;
+    isProcessingRef.current = true;
+    try {
+      const uploadPromises: Promise<void>[] = [];
+      const deletePromises: Promise<void>[] = [];
 
-    const originalContent = selectedBoard.content as SongItemWithoutImages;
-    const modifiedContent = newContent as SongItemWithoutImages;
+      const originalContent = selectedBoard.content as SongItemWithoutImages;
+      const modifiedContent = newContent as SongItemWithoutImages;
 
-    // 원본 songs 순회
-    originalContent.songs.forEach((originalSong) => {
-      // 수정된 content에서 해당 id를 가진 song을 찾음
-      const modifiedSong = modifiedContent.songs.find(
-        (song) => song.id === originalSong.id
-      );
+      // 원본 songs 순회
+      originalContent.songs.forEach((originalSong) => {
+        // 수정된 content에서 해당 id를 가진 song을 찾음
+        const modifiedSong = modifiedContent.songs.find(
+          (song) => song.id === originalSong.id
+        );
 
-      // song이 삭제된 경우 - 모든 이미지 삭제
-      if (!modifiedSong && originalSong.images?.length) {
-        originalSong.images.forEach((image) => {
-          deletePromises.push(deleteImage(image.objectName));
-        });
-        return;
-      }
+        // song이 삭제된 경우 - 모든 이미지 삭제
+        if (!modifiedSong && originalSong.images?.length) {
+          originalSong.images.forEach((image) => {
+            deletePromises.push(deleteImage(image.objectName));
+          });
+          return;
+        }
 
-      // song이 존재하는 경우 - 이미지 비교
-      if (modifiedSong && originalSong.images?.length) {
-        originalSong.images.forEach((originalImage) => {
-          const imageStillExists = modifiedSong.images?.some(
-            (modifiedImage) => modifiedImage.id === originalImage.id
-          );
-          if (!imageStillExists) {
-            // 이미지가 삭제된 경우
-            deletePromises.push(deleteImage(originalImage.objectName));
-          }
-        });
-      }
-    });
-
-    // 새로운 이미지 업로드 처리
-    modifiedContent.songs.forEach((modifiedSong) => {
-      modifiedSong.images?.forEach((image) => {
-        if (image.file && image.uploadUrl) {
-          uploadPromises.push(uploadImage(image.uploadUrl, image.file));
+        // song이 존재하는 경우 - 이미지 비교
+        if (modifiedSong && originalSong.images?.length) {
+          originalSong.images.forEach((originalImage) => {
+            const imageStillExists = modifiedSong.images?.some(
+              (modifiedImage) => modifiedImage.id === originalImage.id
+            );
+            if (!imageStillExists) {
+              // 이미지가 삭제된 경우
+              deletePromises.push(deleteImage(originalImage.objectName));
+            }
+          });
         }
       });
-    });
 
-    try {
+      // 새로운 이미지 업로드 처리
+      modifiedContent.songs.forEach((modifiedSong) => {
+        modifiedSong.images?.forEach((image) => {
+          if (image.file && image.uploadUrl) {
+            uploadPromises.push(uploadImage(image.uploadUrl, image.file));
+          }
+        });
+      });
       const transformedContent = {
         kind: newContent.kind,
         description: modifiedContent.description,
@@ -227,36 +235,45 @@ export const PraisePage = ({ boardId }: { boardId: BoardName }) => {
       setBoardState("detail");
     } catch (error) {
       console.error("Error during edit process:", error);
+    } finally {
+      isProcessingRef.current = false;
     }
   };
 
   const handleItemDetail = async (post: Posts) => {
-    const content = post.content as Praise;
+    if (isProcessingRef.current) return;
+    isProcessingRef.current = true;
+    try {
+      const content = post.content as Praise;
 
-    for (let i = 0; i < content.songs.length; i++) {
-      const song = content.songs[i];
+      for (let i = 0; i < content.songs.length; i++) {
+        const song = content.songs[i];
 
-      // images가 존재하는 경우에만 처리
-      if (song.images && song.images.length > 0) {
-        // 모든 이미지에 대한 다운로드 URL을 병렬로 가져오기
-        const downloadUrlPromises = song.images.map((objectName) =>
-          getDownloadUrl(objectName)
-        );
-        const downloadUrls = await Promise.all(downloadUrlPromises);
+        // images가 존재하는 경우에만 처리
+        if (song.images && song.images.length > 0) {
+          // 모든 이미지에 대한 다운로드 URL을 병렬로 가져오기
+          const downloadUrlPromises = song.images.map((objectName) =>
+            getDownloadUrl(objectName)
+          );
+          const downloadUrls = await Promise.all(downloadUrlPromises);
 
-        const target = post.content as SongItemWithoutImages;
+          const target = post.content as SongItemWithoutImages;
 
-        // 새로운 Image 객체 배열 생성
-        target.songs[i].images = downloadUrls.map((preview, index) => ({
-          id: Math.random().toString(36).substring(4),
-          preview,
-          objectName: song.images![index],
-        }));
+          // 새로운 Image 객체 배열 생성
+          target.songs[i].images = downloadUrls.map((preview, index) => ({
+            id: Math.random().toString(36).substring(4),
+            preview,
+            objectName: song.images![index],
+          }));
+        }
       }
+      setSelectedBoard(post);
+      setBoardState("detail");
+    } catch {
+      console.error("가져오기 실패");
+    } finally {
+      isProcessingRef.current = false;
     }
-
-    setSelectedBoard(post);
-    setBoardState("detail");
   };
 
   const renderContent = () => {
@@ -334,6 +351,7 @@ export const PraisePage = ({ boardId }: { boardId: BoardName }) => {
 
       <MonthController
         boardState={boardState}
+        initDate={selectedListDate}
         setBoardState={setBoardState}
         canEdit={canWrite}
         // canEdit={selectedBoard?.createdId === userInfo?.pid}

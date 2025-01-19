@@ -9,12 +9,17 @@ import { ChevronUp, ChevronDown } from "lucide-react";
 
 interface MonthPickerProps {
   changeYearMonth: (value: Date) => void;
+  initDate?: Date;
 }
 
-export const YearMonth: React.FC<MonthPickerProps> = ({ changeYearMonth }) => {
-  const [currentDate] = useState(new Date());
-  const [selectedDate, setSelectedDate] = useState(currentDate);
-  const [baseDate, setBaseDate] = useState(selectedDate);
+export const YearMonth: React.FC<MonthPickerProps> = ({
+  changeYearMonth,
+  initDate,
+}) => {
+  const currentDate = new Date();
+  // 초기 날짜 설정 로직 수정
+  const [selectedDate, setSelectedDate] = useState(initDate || currentDate);
+  const [baseDate, setBaseDate] = useState(initDate || currentDate);
   const [open, setOpen] = useState(false);
 
   const formatDate = (date: Date): string => {
@@ -44,6 +49,12 @@ export const YearMonth: React.FC<MonthPickerProps> = ({ changeYearMonth }) => {
     setSelectedDate(date);
     setOpen(false);
   };
+  useEffect(() => {
+    if (initDate) {
+      setSelectedDate(initDate);
+      setBaseDate(initDate);
+    }
+  }, [initDate]);
 
   useEffect(() => {
     if (!open) {

@@ -18,7 +18,7 @@ import { Label } from "@/components/ui/label";
 import { useGlobalStore } from "@/stores/global.store";
 import { ChevronRight } from "lucide-react";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 export const CollegeLeaderReportPage = ({
   daechung,
@@ -50,6 +50,7 @@ export const CollegeLeaderReportPage = ({
     const day = String(selectedDate.getDate()).padStart(2, "0");
     return `${year}-${month}-${day}`;
   }, [selectedDate]);
+  const isProcessingRef = useRef(false);
 
   // 선택된 날짜의 글 목록을 가져오는 함수
   const fetchLists = async () => {
@@ -59,11 +60,19 @@ export const CollegeLeaderReportPage = ({
   };
 
   const handleClickReport = async (pid: string) => {
-    const [sarangbang, reports] = await Promise.all([
-      getSarangbangByPid(pid),
-      getOneReports(daechung, formattedDate, pid),
-    ]);
-    setAttendances(sortAttendanceRecords(reports, sarangbang));
+    if (isProcessingRef.current) return;
+    isProcessingRef.current = true;
+    try {
+      const [sarangbang, reports] = await Promise.all([
+        getSarangbangByPid(pid),
+        getOneReports(daechung, formattedDate, pid),
+      ]);
+      setAttendances(sortAttendanceRecords(reports, sarangbang));
+    } catch {
+      console.error("요청 실패");
+    } finally {
+      isProcessingRef.current = false;
+    }
   };
 
   const createEmptyAttendances = (sarangbang: Sarangbang): Attendance[] => {
@@ -107,8 +116,8 @@ export const CollegeLeaderReportPage = ({
   };
 
   const handleCreate = async () => {
-    if (!userInfo) return;
-
+    if (!userInfo || isProcessingRef.current) return;
+    isProcessingRef.current = true;
     try {
       const sarangbang = await getSarangbangByPid(userInfo.pid);
       const emptyAttendances = createEmptyAttendances(sarangbang);
@@ -118,6 +127,8 @@ export const CollegeLeaderReportPage = ({
       setEditable(true);
     } catch (error) {
       console.error("Failed to create new report:", error);
+    } finally {
+      isProcessingRef.current = false;
     }
   };
 
@@ -213,7 +224,8 @@ export const CollegeLeaderReportPage = ({
   };
 
   const handleSave = async () => {
-    if (!newAttendances || !attendances) return;
+    if (!newAttendances || !attendances || isProcessingRef.current) return;
+    isProcessingRef.current = true;
     try {
       if (isCreate) {
         await createReport(newAttendances);
@@ -238,6 +250,8 @@ export const CollegeLeaderReportPage = ({
       }
     } catch (error) {
       console.error("Failed to update attendances:", error);
+    } finally {
+      isProcessingRef.current = false;
     }
   };
 

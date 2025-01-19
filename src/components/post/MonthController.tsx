@@ -19,6 +19,7 @@ interface IProps {
   initRequestDate?: Date | null;
   noDetail?: boolean;
   noDateCreateEdit?: boolean;
+  initDate?: Date;
 }
 
 export const MonthController = ({
@@ -35,6 +36,7 @@ export const MonthController = ({
   initRequestDate,
   noDetail = false,
   noDateCreateEdit = false,
+  initDate,
 }: IProps) => {
   const handleClickCancelCreate = () => {
     setBoardState("list");
@@ -104,7 +106,7 @@ export const MonthController = ({
     default:
       return (
         <div className="flex justify-between items-center">
-          <YearMonth changeYearMonth={changeYearMonth} />
+          <YearMonth changeYearMonth={changeYearMonth} initDate={initDate} />
           {canWrite && <Button onClick={handleClickCreate}>작성하기</Button>}
         </div>
       );
