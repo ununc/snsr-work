@@ -19,6 +19,7 @@ import {
 import { CalendarIcon } from "lucide-react";
 import { ScheduleEvent } from "@/apis/calendar/calendar";
 import { Checkbox } from "../ui/checkbox";
+import { DrawerFooter, DrawerHeader, DrawerTitle } from "../ui/drawer";
 
 interface EventEditFormProps {
   event: ScheduleEvent;
@@ -170,191 +171,209 @@ export const EventEditForm: React.FC<EventEditFormProps> = ({
   };
 
   return (
-    <div className="p-4">
-      <div className="mb-4">
-        <Label className="mb-2 block">제목</Label>
-        <Input
-          value={formData.title}
-          onChange={(e) =>
-            setFormData((prev) => ({ ...prev, title: e.target.value }))
-          }
-        />
-      </div>
+    <>
+      <DrawerHeader className="mt-2">
+        <DrawerTitle>일정 관리</DrawerTitle>
+      </DrawerHeader>
 
-      <div className="mb-4">
-        <Label className="mb-2 block">내용</Label>
-        <Textarea
-          value={formData.content}
-          onChange={(e) =>
-            setFormData((prev) => ({ ...prev, content: e.target.value }))
-          }
-          className="min-h-[100px]"
-        />
-      </div>
-
-      <div className="mb-4">
-        <Label className="mb-2 block">색상</Label>
-        <Select
-          value={formData.color}
-          onValueChange={(value) =>
-            setFormData((prev) => ({ ...prev, color: value }))
-          }
-          aria-labelledby="color-select"
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="색상 선택" />
-          </SelectTrigger>
-          <SelectContent className="max-h-48">
-            {colorOptions.map((color) => (
-              <SelectItem key={color.value} value={color.value}>
-                <div className="flex items-center">
-                  <div
-                    className="w-4 h-4 rounded-full mr-2"
-                    style={{ backgroundColor: color.value }}
-                  />
-                  {color.label}
-                </div>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="mb-4">
-        <Label className="mb-2 block">시작일</Label>
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              className="w-full justify-start text-left font-normal"
-            >
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              {startDateObj ? (
-                formatDisplayDate(startDateObj)
-              ) : (
-                <span>날짜를 선택하세요</span>
-              )}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent
-            className="w-auto p-0"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div
-              onClick={(e) => e.stopPropagation()}
-              onMouseDown={(e) => e.stopPropagation()}
-            >
-              <Calendar
-                mode="single"
-                formatters={{
-                  formatCaption: (date) => {
-                    return `${date.getFullYear()}년 ${String(
-                      date.getMonth() + 1
-                    ).padStart(2, "0")}월`;
-                  },
-                  formatWeekdayName: (date) => {
-                    const weekdays = ["월", "화", "수", "목", "금", "토", "일"];
-                    return weekdays[
-                      date.getDay() === 0 ? 6 : date.getDay() - 1
-                    ];
-                  },
-                }}
-                selected={startDateObj}
-                onSelect={(date) => {
-                  handleDateChange("startDate", date);
-                  return false;
-                }}
-                initialFocus
-              />
-            </div>
-          </PopoverContent>
-        </Popover>
-      </div>
-
-      <div className="mb-4">
-        <Label className="mb-2 block">종료일</Label>
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              className="w-full justify-start text-left font-normal"
-            >
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              {endDateObj ? (
-                formatDisplayDate(endDateObj)
-              ) : (
-                <span>날짜를 선택하세요</span>
-              )}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="start">
-            <Calendar
-              mode="single"
-              selected={endDateObj}
-              onSelect={(date) => handleDateChange("endDate", date)}
-              disabled={(date) => date < (startDateObj || new Date())}
-              initialFocus
+      <div className="max-h-[70dvh] overflow-y-scroll">
+        <div className="p-4">
+          <div className="mb-4">
+            <Label className="mb-2 block">제목</Label>
+            <Input
+              value={formData.title}
+              onChange={(e) =>
+                setFormData((prev) => ({ ...prev, title: e.target.value }))
+              }
             />
-          </PopoverContent>
-        </Popover>
-      </div>
+          </div>
 
-      <div className="mb-4">
-        <Label className="mb-2 block">담당 그룹</Label>
-        <Select
-          value={formData.hostGroup}
-          onValueChange={(value) =>
-            setFormData((prev) => ({ ...prev, hostGroup: value }))
-          }
-          aria-labelledby="main-group-select"
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="담당 그룹 선택" />
-          </SelectTrigger>
-          <SelectContent className="max-h-48">
-            {groupOptions.map((group) => (
-              <SelectItem key={group} value={group}>
-                {group}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+          <div className="mb-4">
+            <Label className="mb-2 block">내용</Label>
+            <Textarea
+              value={formData.content}
+              onChange={(e) =>
+                setFormData((prev) => ({ ...prev, content: e.target.value }))
+              }
+              className="min-h-[100px]"
+            />
+          </div>
 
-      <div className="mb-4">
-        <Label className="mb-2 block">관련 그룹</Label>
-        <div className="border rounded-md p-2">
-          <div className="grid grid-flow-col grid-rows-4 auto-cols-fr gap-x-6 gap-y-2 max-w-[900px]">
-            {groupOptions.map((group) => (
-              <div key={group} className="flex items-center space-x-2">
-                <Checkbox
-                  id={`group-${group}`}
-                  checked={formData.relativeGroup.includes(group)}
-                  onCheckedChange={() => handleRelativeGroupToggle(group)}
-                />
-                <label
-                  htmlFor={`group-${group}`}
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+          <div className="mb-4">
+            <Label className="mb-2 block">색상</Label>
+            <Select
+              value={formData.color}
+              onValueChange={(value) =>
+                setFormData((prev) => ({ ...prev, color: value }))
+              }
+              aria-labelledby="color-select"
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="색상 선택" />
+              </SelectTrigger>
+              <SelectContent className="max-h-48">
+                {colorOptions.map((color) => (
+                  <SelectItem key={color.value} value={color.value}>
+                    <div className="flex items-center">
+                      <div
+                        className="w-4 h-4 rounded-full mr-2"
+                        style={{ backgroundColor: color.value }}
+                      />
+                      {color.label}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="mb-4">
+            <Label className="mb-2 block">시작일</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="w-full justify-start text-left font-normal"
                 >
-                  {group}
-                </label>
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {startDateObj ? (
+                    formatDisplayDate(startDateObj)
+                  ) : (
+                    <span>날짜를 선택하세요</span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent
+                className="w-auto p-0"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div
+                  onClick={(e) => e.stopPropagation()}
+                  onMouseDown={(e) => e.stopPropagation()}
+                >
+                  <Calendar
+                    mode="single"
+                    formatters={{
+                      formatCaption: (date) => {
+                        return `${date.getFullYear()}년 ${String(
+                          date.getMonth() + 1
+                        ).padStart(2, "0")}월`;
+                      },
+                      formatWeekdayName: (date) => {
+                        const weekdays = [
+                          "월",
+                          "화",
+                          "수",
+                          "목",
+                          "금",
+                          "토",
+                          "일",
+                        ];
+                        return weekdays[
+                          date.getDay() === 0 ? 6 : date.getDay() - 1
+                        ];
+                      },
+                    }}
+                    selected={startDateObj}
+                    onSelect={(date) => {
+                      handleDateChange("startDate", date);
+                      return false;
+                    }}
+                    initialFocus
+                  />
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
+
+          <div className="mb-4">
+            <Label className="mb-2 block">종료일</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="w-full justify-start text-left font-normal"
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {endDateObj ? (
+                    formatDisplayDate(endDateObj)
+                  ) : (
+                    <span>날짜를 선택하세요</span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={endDateObj}
+                  onSelect={(date) => handleDateChange("endDate", date)}
+                  disabled={(date) => date < (startDateObj || new Date())}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
+
+          <div className="mb-4">
+            <Label className="mb-2 block">담당 그룹</Label>
+            <Select
+              value={formData.hostGroup}
+              onValueChange={(value) =>
+                setFormData((prev) => ({ ...prev, hostGroup: value }))
+              }
+              aria-labelledby="main-group-select"
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="담당 그룹 선택" />
+              </SelectTrigger>
+              <SelectContent className="max-h-48">
+                {groupOptions.map((group) => (
+                  <SelectItem key={group} value={group}>
+                    {group}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="mb-4">
+            <Label className="mb-2 block">관련 그룹</Label>
+            <div className="border rounded-md p-2">
+              <div className="grid grid-flow-col grid-rows-4 auto-cols-fr gap-x-6 gap-y-2 max-w-[900px]">
+                {groupOptions.map((group) => (
+                  <div key={group} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`group-${group}`}
+                      checked={formData.relativeGroup.includes(group)}
+                      onCheckedChange={() => handleRelativeGroupToggle(group)}
+                    />
+                    <label
+                      htmlFor={`group-${group}`}
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    >
+                      {group}
+                    </label>
+                  </div>
+                ))}
               </div>
-            ))}
+            </div>
           </div>
         </div>
       </div>
-      <div className="flex gap-2 mt-6">
-        <Button
-          onClick={handleSubmit}
-          className="flex-1"
-          disabled={!isFormValid}
-        >
-          저장
-        </Button>
-        <Button onClick={onCancel} variant="outline" className="flex-1">
-          취소
-        </Button>
-      </div>
-    </div>
+      <DrawerFooter className="mb-12">
+        <div className="flex items-center justify-between gap-3">
+          <Button
+            onClick={handleSubmit}
+            className="flex-1"
+            disabled={!isFormValid}
+          >
+            저장
+          </Button>
+          <Button onClick={onCancel} variant="outline" className="flex-1">
+            취소
+          </Button>
+        </div>
+      </DrawerFooter>
+    </>
   );
 };

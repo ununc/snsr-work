@@ -89,10 +89,12 @@ export const Schedule: React.FC<ScheduleProps> = ({
   };
 
   const handleTouchStart = (e: React.TouchEvent) => {
+    if (isDrawerOpen) return;
     touchStartRef.current = e.touches[0].clientY;
   };
 
   const handleTouchEnd = (e: React.TouchEvent) => {
+    if (isDrawerOpen) return;
     if (touchStartRef.current === null) return;
 
     const touchEnd = e.changedTouches[0].clientY;
@@ -508,16 +510,11 @@ export const Schedule: React.FC<ScheduleProps> = ({
         >
           {newEvent ? (
             <DrawerContent>
-              <div className=" max-h-[35rem] overflow-y-scroll">
-                <DrawerTitle className="h-0 overflow-hidden">
-                  일정 조정
-                </DrawerTitle>
-                <EventEditForm
-                  event={newEvent}
-                  onSubmit={handleRequestEvent}
-                  onCancel={handleDrawerClose}
-                />
-              </div>
+              <EventEditForm
+                event={newEvent}
+                onSubmit={handleRequestEvent}
+                onCancel={handleDrawerClose}
+              />
             </DrawerContent>
           ) : (
             <DrawerContent>
@@ -543,12 +540,12 @@ export const Schedule: React.FC<ScheduleProps> = ({
                 <DrawerFooter className="mt-5 mb-12">
                   <div className="flex items-center justify-between gap-3">
                     {canWrite && (
-                      <Button className="w-1/2" onClick={handleEdit}>
+                      <Button className="flex-1" onClick={handleEdit}>
                         수정
                       </Button>
                     )}
                     <DrawerClose asChild>
-                      <Button variant="outline" className="w-full">
+                      <Button variant="outline" className="flex-1">
                         닫기
                       </Button>
                     </DrawerClose>

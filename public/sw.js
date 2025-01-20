@@ -1,4 +1,4 @@
-const version = "0.4.9";
+const version = "0.5.0";
 const domain = "https://hcsb.synology.me:6555";
 // const domain = "http://localhost:3000";
 const pushKey =

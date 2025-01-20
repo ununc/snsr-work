@@ -68,6 +68,7 @@ export const CalendarPage = () => {
   };
 
   const checkPermittedRole = (roleNames: { id: string; name: string }[]) => {
+    if (!roleNames.length) return false;
     const directMatches = ["목사님", "대표리더", "관리자"];
 
     for (const role of roleNames) {
@@ -112,7 +113,7 @@ export const CalendarPage = () => {
           events={events}
           currentDate={currentDate}
           onMonthChange={setCurrentDate}
-          canWrite={true}
+          canWrite={canWrite}
           setCreateHandler={setCreateHandler}
           requestSchedule={requestSchedule}
         />
