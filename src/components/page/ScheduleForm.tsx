@@ -19,7 +19,12 @@ import {
 import { CalendarIcon } from "lucide-react";
 import { ScheduleEvent } from "@/apis/calendar/calendar";
 import { Checkbox } from "../ui/checkbox";
-import { DrawerFooter, DrawerHeader, DrawerTitle } from "../ui/drawer";
+import {
+  DrawerContent,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+} from "../ui/drawer";
 
 interface EventEditFormProps {
   event: ScheduleEvent;
@@ -99,6 +104,8 @@ export const EventEditForm: React.FC<EventEditFormProps> = ({
     parseDate(formData.endDate)
   );
 
+  const [isSelectOpen, setIsSelectOpen] = useState(false);
+
   const isFormValid = useMemo(() => {
     if (
       formData.color === "tr" &&
@@ -171,7 +178,13 @@ export const EventEditForm: React.FC<EventEditFormProps> = ({
   };
 
   return (
-    <>
+    <DrawerContent
+      onPointerDownOutside={(e) => {
+        if (isSelectOpen) {
+          e.preventDefault();
+        }
+      }}
+    >
       <DrawerHeader className="mt-2">
         <DrawerTitle>일정 관리</DrawerTitle>
       </DrawerHeader>
@@ -206,6 +219,11 @@ export const EventEditForm: React.FC<EventEditFormProps> = ({
               onValueChange={(value) =>
                 setFormData((prev) => ({ ...prev, color: value }))
               }
+              onOpenChange={(open) => {
+                setTimeout(() => {
+                  setIsSelectOpen(open);
+                }, 400);
+              }}
               aria-labelledby="color-select"
             >
               <SelectTrigger>
@@ -321,6 +339,11 @@ export const EventEditForm: React.FC<EventEditFormProps> = ({
               onValueChange={(value) =>
                 setFormData((prev) => ({ ...prev, hostGroup: value }))
               }
+              onOpenChange={(open) => {
+                setTimeout(() => {
+                  setIsSelectOpen(open);
+                }, 400);
+              }}
               aria-labelledby="main-group-select"
             >
               <SelectTrigger>
@@ -374,6 +397,6 @@ export const EventEditForm: React.FC<EventEditFormProps> = ({
           </Button>
         </div>
       </DrawerFooter>
-    </>
+    </DrawerContent>
   );
 };

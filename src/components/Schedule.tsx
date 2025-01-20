@@ -509,13 +509,11 @@ export const Schedule: React.FC<ScheduleProps> = ({
           onOpenChange={(open) => !open && handleDrawerClose()}
         >
           {newEvent ? (
-            <DrawerContent>
-              <EventEditForm
-                event={newEvent}
-                onSubmit={handleRequestEvent}
-                onCancel={handleDrawerClose}
-              />
-            </DrawerContent>
+            <EventEditForm
+              event={newEvent}
+              onSubmit={handleRequestEvent}
+              onCancel={handleDrawerClose}
+            />
           ) : (
             <DrawerContent>
               <div className="mx-auto w-full max-w-sm">
