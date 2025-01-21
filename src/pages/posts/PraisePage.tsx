@@ -7,6 +7,7 @@ import { MonthController } from "@/components/post/MonthController";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { createEditState } from "@/etc/routeWord";
+import { useToast } from "@/hooks/use-toast";
 import { useGlobalStore } from "@/stores/global.store";
 import { deepCopy } from "@/util/deepCopy";
 import { Clock } from "lucide-react";
@@ -55,6 +56,7 @@ export const PraisePage = ({ boardId }: { boardId: BoardName }) => {
     useState<Date | null>(null);
   const isProcessingRef = useRef(false);
 
+  const { toast } = useToast();
   const { userInfo, getCanWriteByDescription } = useGlobalStore();
 
   const changeYearMonth = async (date: Date) => {
@@ -91,9 +93,12 @@ export const PraisePage = ({ boardId }: { boardId: BoardName }) => {
     if (!userInfo?.pid || isProcessingRef.current) return;
     isProcessingRef.current = true;
     try {
+      const filteredSong = newContent.songs.filter(
+        (song) => song.title && song.lyrics
+      );
       const uploadPromises: Promise<void>[] = [];
 
-      newContent.songs.forEach((song) => {
+      filteredSong.forEach((song) => {
         song.images?.forEach((image) => {
           if (image.objectName && image.file) {
             uploadPromises.push(
@@ -105,7 +110,7 @@ export const PraisePage = ({ boardId }: { boardId: BoardName }) => {
       const transformedContent = {
         kind: newContent.kind,
         description: newContent.description,
-        songs: newContent.songs.map((song) => ({
+        songs: filteredSong.map((song) => ({
           title: song.title,
           lyrics: song.lyrics,
           link: song.link,
@@ -137,7 +142,11 @@ export const PraisePage = ({ boardId }: { boardId: BoardName }) => {
       });
       setBoardState("list");
     } catch {
-      console.error("요청 실패");
+      toast({
+        title: "생성 실패",
+        duration: 2000,
+        variant: "destructive",
+      });
     } finally {
       isProcessingRef.current = false;
     }
@@ -162,10 +171,13 @@ export const PraisePage = ({ boardId }: { boardId: BoardName }) => {
       const originalContent = selectedBoard.content as SongItemWithoutImages;
       const modifiedContent = newContent as SongItemWithoutImages;
 
+      const filteredSong = modifiedContent.songs.filter(
+        (song) => song.title && song.lyrics
+      );
       // 원본 songs 순회
       originalContent.songs.forEach((originalSong) => {
         // 수정된 content에서 해당 id를 가진 song을 찾음
-        const modifiedSong = modifiedContent.songs.find(
+        const modifiedSong = filteredSong.find(
           (song) => song.id === originalSong.id
         );
 
@@ -192,31 +204,30 @@ export const PraisePage = ({ boardId }: { boardId: BoardName }) => {
       });
 
       // 새로운 이미지 업로드 처리
-      modifiedContent.songs.forEach((modifiedSong) => {
+      filteredSong.forEach((modifiedSong) => {
         modifiedSong.images?.forEach((image) => {
           if (image.file && image.uploadUrl) {
             uploadPromises.push(uploadImage(image.uploadUrl, image.file));
           }
         });
       });
+
       const transformedContent = {
         kind: newContent.kind,
         description: modifiedContent.description,
-        songs: modifiedContent.songs.map((song) => ({
+        songs: filteredSong.map((song) => ({
           id: song.id,
           title: song.title,
           lyrics: song.lyrics,
           link: song.link,
           images: song.images
-            ? song.images
-                .map((img) => img.objectName)
-                .filter((name): name is string => !!name)
+            ? song.images.map((img) => img.objectName).filter((name) => name)
             : [],
         })),
       };
 
       // 모든 업로드와 삭제 작업 실행
-      await Promise.all([...uploadPromises, ...deletePromises]);
+      await Promise.allSettled([...uploadPromises, ...deletePromises]);
 
       // 게시글 업데이트
       const editedPost = await updatePost(userInfo.pid, {
@@ -233,8 +244,12 @@ export const PraisePage = ({ boardId }: { boardId: BoardName }) => {
 
       setSelectedBoard({ ...selectedBoard, content: newContent } as Posts);
       setBoardState("detail");
-    } catch (error) {
-      console.error("Error during edit process:", error);
+    } catch {
+      toast({
+        title: "수정 실패",
+        duration: 2000,
+        variant: "destructive",
+      });
     } finally {
       isProcessingRef.current = false;
     }
@@ -249,8 +264,7 @@ export const PraisePage = ({ boardId }: { boardId: BoardName }) => {
       for (let i = 0; i < content.songs.length; i++) {
         const song = content.songs[i];
 
-        // images가 존재하는 경우에만 처리
-        if (song.images && song.images.length > 0) {
+        if (song.images?.length) {
           // 모든 이미지에 대한 다운로드 URL을 병렬로 가져오기
           const downloadUrlPromises = song.images.map((objectName) =>
             getDownloadUrl(objectName)

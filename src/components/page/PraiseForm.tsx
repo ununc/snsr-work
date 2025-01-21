@@ -31,22 +31,8 @@ interface SongItemWithoutImages {
   songs: Song[];
 }
 
-const initValue: SongItemWithoutImages = {
-  kind: "찬양",
-  description: "",
-  songs: [
-    {
-      id: Math.random().toString(36).substring(4),
-      title: "",
-      lyrics: "",
-      link: "",
-      images: [],
-    },
-  ],
-};
-
 interface PraiseFormProps {
-  initialData?: SongItemWithoutImages;
+  initialData: SongItemWithoutImages;
   onSubmit: (data: SongItemWithoutImages) => void;
   userPID: string;
   readonly?: boolean;
@@ -62,7 +48,7 @@ const calculateRows = (text: string) => {
 };
 
 export const PraiseForm: React.FC<PraiseFormProps> = ({
-  initialData = initValue,
+  initialData,
   onSubmit,
   userPID,
   readonly = false,
@@ -82,11 +68,13 @@ export const PraiseForm: React.FC<PraiseFormProps> = ({
   useEffect(() => {
     if (readonly) {
       setFormData(initialData);
+      setViewerOpen(false);
+      setSelectedSongIndex(0);
+      setSelectedImageIndex(0);
     }
   }, [readonly, initialData]);
 
   const handleKindChange = (kind: (typeof KINDS)[number]) => {
-    if (readonly) return;
     setFormData((prev) => ({
       ...prev,
       kind,
@@ -94,7 +82,6 @@ export const PraiseForm: React.FC<PraiseFormProps> = ({
   };
 
   const handleDescriptionChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
-    if (readonly) return;
     setFormData((prev) => ({
       ...prev,
       description: e.target.value,
@@ -152,12 +139,17 @@ export const PraiseForm: React.FC<PraiseFormProps> = ({
     }
   };
 
-  const removeImage = (songIndex: number, imageId: string) => {
-    if (readonly) return;
+  const removeImage = (imageId: string, songIndex: number) => {
+    const input = document.getElementById(
+      `image-upload-${songIndex}`
+    ) as HTMLInputElement;
+    if (input) {
+      input.value = ""; // Reset the input
+    }
+
     setFormData((prev) => ({
       ...prev,
-      songs: prev.songs.map((song, i) => {
-        if (i !== songIndex) return song;
+      songs: prev.songs.map((song) => {
         return {
           ...song,
           images: (song.images || []).filter((img) => img.id !== imageId),
@@ -167,7 +159,6 @@ export const PraiseForm: React.FC<PraiseFormProps> = ({
   };
 
   const addSong = () => {
-    if (readonly) return;
     setFormData((prev) => ({
       ...prev,
       songs: [
@@ -183,20 +174,17 @@ export const PraiseForm: React.FC<PraiseFormProps> = ({
     }));
   };
 
-  const removeSong = (index: number) => {
-    if (readonly) return;
+  const removeSong = (id: string) => {
     setFormData((prev) => ({
       ...prev,
-      songs: prev.songs.filter((_, i) => i !== index),
+      songs: prev.songs.filter((song) => song.id !== id),
     }));
   };
 
   const handleImageClick = (songIndex: number, imageIndex: number) => {
-    if (readonly) {
-      setSelectedSongIndex(songIndex);
-      setSelectedImageIndex(imageIndex);
-      setViewerOpen(true);
-    }
+    setSelectedSongIndex(songIndex);
+    setSelectedImageIndex(imageIndex);
+    setViewerOpen(true);
   };
 
   return (
@@ -240,7 +228,7 @@ export const PraiseForm: React.FC<PraiseFormProps> = ({
                 type="button"
                 variant="destructive"
                 size="sm"
-                onClick={() => removeSong(songIndex)}
+                onClick={() => removeSong(song.id)}
               >
                 <TrashIcon className="w-4 h-4" />
               </Button>
@@ -399,7 +387,7 @@ export const PraiseForm: React.FC<PraiseFormProps> = ({
                       variant="destructive"
                       size="sm"
                       className="absolute p-2 top-2 right-2 rounded-full"
-                      onClick={() => removeImage(songIndex, img.id)}
+                      onClick={() => removeImage(img.id, songIndex)}
                     >
                       <TrashIcon className="w-4 h-4" />
                     </Button>
@@ -418,7 +406,7 @@ export const PraiseForm: React.FC<PraiseFormProps> = ({
           </Button>
         </div>
       )}
-      {readonly && formData.songs[selectedSongIndex]?.images && (
+      {readonly && formData?.songs?.[selectedSongIndex]?.images && (
         <ImageViewer
           images={formData.songs[selectedSongIndex].images || []}
           isOpen={viewerOpen}

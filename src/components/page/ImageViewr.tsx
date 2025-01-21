@@ -80,7 +80,7 @@ export const ImageViewer = ({
         style={{ touchAction: "pinch-zoom" }}
       >
         <img
-          src={images[currentIndex].preview}
+          src={images?.[currentIndex]?.preview}
           alt={`Slide ${currentIndex + 1}`}
           className="max-h-full max-w-full object-contain"
           style={{ touchAction: "pinch-zoom" }}

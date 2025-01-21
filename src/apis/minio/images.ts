@@ -13,11 +13,15 @@ export const getPresignedUrl = async (
 };
 
 export const uploadImage = async (url: string, file: File) => {
-  await axios.put(url, file, {
-    headers: {
-      "Content-Type": file.type,
-    },
-  });
+  try {
+    await axios.put(url, file, {
+      headers: {
+        "Content-Type": file.type,
+      },
+    });
+  } catch {
+    console.error("File upload Fail");
+  }
 };
 
 export const getDownloadUrl = async (filePath: string): Promise<string> => {
@@ -29,5 +33,9 @@ export const getDownloadUrl = async (filePath: string): Promise<string> => {
 export const deleteImage = async (filePath: string) => {
   if (!filePath) return undefined;
   const encodedFilePath = encodeURIComponent(filePath);
-  await apiClient.delete(`minio/file/${encodedFilePath}`);
+  try {
+    await apiClient.delete(`minio/file/${encodedFilePath}`);
+  } catch {
+    console.error("File not found");
+  }
 };
