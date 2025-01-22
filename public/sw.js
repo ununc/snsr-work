@@ -1,4 +1,4 @@
-const version = "0.5.8";
+const version = "0.5.9";
 const domain = "https://hcsb.synology.me:6555";
 // const domain = "http://localhost:3000";
 const pushKey =
@@ -85,7 +85,10 @@ const handleApiRequest = async (request) => {
 const handleMinioRequest = async (request) => {
   try {
     if (request.method === "PUT") {
-      const response = await fetch(request);
+      const response = await fetch(request, {
+        // 자체 서명된 인증서를 허용
+        rejectUnauthorized: false,
+      });
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -98,9 +101,12 @@ const handleMinioRequest = async (request) => {
       return response;
     }
 
-    return fetch(request);
-  } catch {
-    console.error("MinIO request failed:");
+    // GET 요청도 같은 옵션 적용
+    return fetch(request, {
+      rejectUnauthorized: false,
+    });
+  } catch (error) {
+    console.error("MinIO request failed:", error);
     return new Response("Storage operation failed", {
       status: 500,
       headers: { "Content-Type": "text/plain" },
