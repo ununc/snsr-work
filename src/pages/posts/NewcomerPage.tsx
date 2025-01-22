@@ -213,6 +213,7 @@ export const NewcomerPage = ({ boardId }: { boardId: BoardName }) => {
 
       const editedPost = await updatePartOfPost(userInfo.pid, {
         id: selectedId,
+        boardName: "newcomer",
         title,
         targetDate,
         content: { ...item, objectName },
@@ -474,7 +475,7 @@ export const NewcomerPage = ({ boardId }: { boardId: BoardName }) => {
                   key={post.id}
                   className="w-full hover:shadow-md transition-shadow"
                 >
-                  <CardContent className="p-4">
+                  <CardContent className="p-3">
                     <div className="flex justify-between items-center">
                       <div className="font-semibold">
                         {content.leader}: {post.title}{" "}
