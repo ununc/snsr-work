@@ -478,7 +478,8 @@ export const NewcomerPage = ({ boardId }: { boardId: BoardName }) => {
                     <div className="flex justify-between items-center">
                       <div className="font-semibold">
                         {content.leader}: {post.title}{" "}
-                        {content.pear.toString().substring(2)}또래{" "}
+                        {content.pear.toString().substring(2)}또래 &#40;
+                        {content.newComer ? "초신자" : "기신자"}&#41;{" "}
                         {content.notes?.length ?? 0}주차
                       </div>
                       {canWrite && (
