@@ -8,6 +8,7 @@ import { getPresignedUrl } from "@/apis/minio/images";
 import { ImageViewer } from "./ImageViewr";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import imageCompression from "browser-image-compression";
 
 interface SongItem {
   id: string;
@@ -113,11 +114,20 @@ export const PraiseForm: React.FC<PraiseFormProps> = ({
     try {
       const newImages: SongItem[] = await Promise.all(
         Array.from(files).map(async (file) => {
-          const { url, objectName } = await getPresignedUrl(userPID, file.name);
+          const compressedFile = await imageCompression(file, {
+            maxSizeMB: 0.6,
+            maxWidthOrHeight: 1024,
+            initialQuality: 0.8,
+          });
+
+          const { url, objectName } = await getPresignedUrl(
+            userPID,
+            compressedFile.name
+          );
           return {
             id: Math.random().toString(36).substring(4),
             file,
-            preview: URL.createObjectURL(file),
+            preview: URL.createObjectURL(compressedFile),
             uploadUrl: url,
             objectName: objectName,
           };

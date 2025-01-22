@@ -140,7 +140,7 @@ export const NewcomerForm: React.FC<NewcomersFormProps> = ({
 
     try {
       const compressedFile = await imageCompression(file, {
-        maxSizeMB: 0.6,
+        maxSizeMB: 0.4,
         maxWidthOrHeight: 512,
         initialQuality: 0.8,
       });
