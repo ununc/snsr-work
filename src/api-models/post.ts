@@ -41,16 +41,14 @@ interface ContentMap {
   Monthly: Board;
 }
 
-// Discriminated union type for post creation
-export interface CreatePost {
-  id?: string;
+export interface CreatePost<T extends BoardName> {
   title?: string;
   targetDate?: string;
-  boardName: BoardName;
-  content: ContentMap[BoardName];
+  boardName: T;
+  content: ContentMap[T];
 }
 
-export interface Posts extends CreatePost {
+export interface Posts<T extends BoardName> extends CreatePost<T> {
   id: string;
   createdId: string;
   createdAt: string;

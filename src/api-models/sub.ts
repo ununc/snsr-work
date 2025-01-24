@@ -1,10 +1,22 @@
 //
+
+export interface ManagedContent {
+  id: string;
+  file?: File;
+  preview: string;
+  objectName: string;
+}
+
 export interface Liturgy {
   preach: string; // 말씀 제목
   bibleVerses: string; // 본문 말씀
   continuity: string; // 콘티
   hymn: string; // 적용 찬양
   images?: string[]; // Optional images
+}
+
+export interface ILiturgyForm extends Omit<Liturgy, "images"> {
+  images: ManagedContent[];
 }
 
 //
@@ -78,8 +90,22 @@ export interface SongItem {
   link?: string;
 }
 
+export const KINDS = ["찬양", "특송", "봉헌", "끝송"] as const;
+
+export type PraiseKind = (typeof KINDS)[number];
+
 export interface Praise {
-  kind: "찬양" | "특송" | "봉헌" | "끝송";
+  kind: PraiseKind;
   description: string;
   songs: SongItem[];
+}
+
+export interface IPraiseForm extends Omit<Praise, "songs"> {
+  songs: {
+    id: string;
+    title: string;
+    lyrics: string;
+    link?: string;
+    images?: ManagedContent[];
+  }[];
 }
