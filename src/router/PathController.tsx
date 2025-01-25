@@ -7,7 +7,6 @@ import { LoginPage } from "@/pages/LoginPage";
 import { SignUpPage } from "@/pages/SignUpPage";
 import { AccountLayout } from "@/layouts/AccountLayout";
 import { NewsPage } from "@/pages/NewsPage";
-import { ManualPage } from "@/pages/board-sub/ManualPage";
 import { CollegeLeaderReportPage } from "@/pages/board-sub/CollegeLeaderReportPage";
 import { BoardPage } from "@/pages/BoardPage";
 import { LiturgyPage } from "@/pages/posts/LiturgyPage";
@@ -57,7 +56,7 @@ export const PathController = () => {
             element={<PromotionPage boardId="promotion" />}
           />
           {/*  */}
-          <Route path="manual" element={<ManualPage boardId="manual" />} />
+          <Route path="manual" element={<BoardPage boardId="manual" />} />
           <Route
             path="monthly-report"
             element={<BoardPage boardId="monthly-report" />}

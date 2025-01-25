@@ -3,12 +3,6 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Congregation } from "@/api-models/sub";
 
-const initValue: Congregation = {
-  man: 0,
-  women: 0,
-  online: 0,
-};
-
 interface CongregationFormProps {
   initialData: Congregation;
   onSubmit: (data: Congregation) => void;
@@ -16,7 +10,7 @@ interface CongregationFormProps {
 }
 
 export const CongregationForm: React.FC<CongregationFormProps> = ({
-  initialData = initValue,
+  initialData,
   onSubmit,
 }) => {
   const [formData, setFormData] = useState<Congregation>(initialData);

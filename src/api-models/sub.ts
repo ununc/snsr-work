@@ -1,4 +1,13 @@
 //
+
+export interface ManagedContent {
+  id: string;
+  file?: File;
+  preview: string;
+  objectName: string;
+  type?: string;
+}
+
 export interface Liturgy {
   preach: string; // 말씀 제목
   bibleVerses: string; // 본문 말씀
@@ -7,29 +16,27 @@ export interface Liturgy {
   images?: string[]; // Optional images
 }
 
+export interface ILiturgyForm extends Omit<Liturgy, "images"> {
+  images: ManagedContent[];
+}
+
 //
 export interface Advertisement {
   description: string; // 광고 설명
   startDate: string; // 시작 날짜
   endDate: string; // 종료 날짜
-  contents: ContentItem[]; // 첨부 파일 목록
+  contents: string[]; // 첨부 파일 목록
+}
+
+export interface IAdvertisementForm extends Omit<Advertisement, "contents"> {
+  contents: ManagedContent[];
+  title: string;
 }
 
 //
 export interface Board {
   substance: string;
-  contents: ContentItem[];
-}
-
-export enum ContentType {
-  IMAGE = "IMAGE",
-  VIDEO = "VIDEO",
-  DOCUMENT = "DOCUMENT",
-}
-
-export interface ContentItem {
-  type: ContentType; // 콘텐츠 타입 (이미지, 비디오, 문서 등)
-  objectPath: string; // 파일 경로
+  contents: string[];
 }
 
 //
@@ -68,6 +75,7 @@ export interface Newcomer {
   absence?: string;
   climbing?: string;
   objectName?: string;
+  promotionEnd?: boolean;
 }
 
 //
@@ -78,8 +86,22 @@ export interface SongItem {
   link?: string;
 }
 
+export const KINDS = ["찬양", "특송", "봉헌", "끝송"] as const;
+
+export type PraiseKind = (typeof KINDS)[number];
+
 export interface Praise {
-  kind: "찬양" | "특송" | "봉헌" | "끝송";
+  kind: PraiseKind;
   description: string;
   songs: SongItem[];
+}
+
+export interface IPraiseForm extends Omit<Praise, "songs"> {
+  songs: {
+    id: string;
+    title: string;
+    lyrics: string;
+    link?: string;
+    images?: ManagedContent[];
+  }[];
 }

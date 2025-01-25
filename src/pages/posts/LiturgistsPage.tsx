@@ -1,4 +1,4 @@
-import { BoardName, Posts, PostTextMatcher } from "@/api-models/post";
+import { Posts, PostTextMatcher } from "@/api-models/post";
 import type { Liturgists } from "@/api-models/sub";
 import { createPost, getPostList, updatePost } from "@/apis/posts/posts";
 import { LiturgistsForm } from "@/components/page/LiturgistsForm";
@@ -25,12 +25,14 @@ const initValue: Liturgists = {
   others: "",
 };
 
-export const LiturgistsPage = ({ boardId }: { boardId: BoardName }) => {
+export const LiturgistsPage = ({ boardId }: { boardId: "liturgists" }) => {
   const [boardState, setBoardState] = useState<
     "list" | "detail" | "create" | "edit"
   >("list");
-  const [boardList, setBoardList] = useState<Posts[]>([]);
-  const [selectedBoard, setSelectedBoard] = useState<Posts | null>(null);
+  const [boardList, setBoardList] = useState<Posts<typeof boardId>[]>([]);
+  const [selectedBoard, setSelectedBoard] = useState<Posts<
+    typeof boardId
+  > | null>(null);
   const [selectedListDate, setSelectedListDate] = useState<Date>(new Date());
   const [newContent, setNewContent] = useState(initValue);
   const [selectedNewContentDate, setSelectedNewContentDate] =
@@ -103,7 +105,7 @@ export const LiturgistsPage = ({ boardId }: { boardId: BoardName }) => {
 
   const handleClickEdit = () => {};
 
-  const handleClickItem = (post: Posts) => {
+  const handleClickItem = (post: Posts<typeof boardId>) => {
     const newContent = deepCopy(post.content as Liturgists);
     setSelectedBoard(post);
     setNewContent(newContent);

@@ -1,6 +1,10 @@
-import { BoardName, Posts, PostTextMatcher } from "@/api-models/post";
-import type { Advertisement, ContentType } from "@/api-models/sub";
-import { deleteImage, getDownloadUrl, uploadImage } from "@/apis/minio/images";
+import { Posts, PostTextMatcher } from "@/api-models/post";
+import type { IAdvertisementForm, ManagedContent } from "@/api-models/sub";
+import {
+  downloadMultipleFiles,
+  handleDelete,
+  handleMultipleUpload,
+} from "@/apis/minio";
 import {
   createPost,
   getAdvertisementList,
@@ -17,21 +21,7 @@ import { deepCopy } from "@/util/deepCopy";
 import { Clock } from "lucide-react";
 import { useRef, useState } from "react";
 
-interface ContentItem {
-  id: string;
-  type: ContentType;
-  objectPath: string;
-  file?: File;
-  preview: string;
-  uploadUrl?: string;
-}
-
-interface Advertisements extends Advertisement {
-  contents: ContentItem[];
-  title: string;
-}
-
-const initValue: Advertisements = {
+const initValue: IAdvertisementForm = {
   title: "",
   description: "",
   startDate: "",
@@ -39,21 +29,28 @@ const initValue: Advertisements = {
   contents: [],
 };
 
-export const AdvertisementPage = ({ boardId }: { boardId: BoardName }) => {
+export const AdvertisementPage = ({
+  boardId,
+}: {
+  boardId: "advertisement";
+}) => {
   const [boardState, setBoardState] = useState<
     "list" | "detail" | "create" | "edit"
   >("list");
 
-  const [boardList, setBoardList] = useState<Posts[]>([]);
-  const [selectedBoard, setSelectedBoard] = useState<Posts | null>(null);
+  const [boardList, setBoardList] = useState<Posts<typeof boardId>[]>([]);
+  const [selectedBoard, setSelectedBoard] = useState<Posts<
+    typeof boardId
+  > | null>(null);
   const [selectedListDate, setSelectedListDate] = useState<Date>(new Date());
   const [newContent, setNewContent] = useState(initValue);
   const isProcessingRef = useRef(false);
 
   const { userInfo, getCanWriteByDescription } = useGlobalStore();
   const { toast } = useToast();
-  const isEmpty = (advertisement: Advertisements): boolean => {
-    const fieldsToCheck: (keyof Omit<Advertisements, "contents">)[] = [
+
+  const isEmpty = (advertisement: IAdvertisementForm): boolean => {
+    const fieldsToCheck: (keyof Omit<IAdvertisementForm, "contents">)[] = [
       "title",
       "description",
       "startDate",
@@ -92,27 +89,26 @@ export const AdvertisementPage = ({ boardId }: { boardId: BoardName }) => {
     isProcessingRef.current = true;
 
     try {
-      const uploadPromises: Promise<void>[] = [];
+      const objectNameList: string[] = [];
+      const FileList: File[] = [];
 
-      // 모든 컨텐츠에 대한 업로드 처리
-      newContent.contents.forEach((content) => {
-        if (content.uploadUrl && content.file) {
-          uploadPromises.push(uploadImage(content.uploadUrl, content.file));
+      for (let i = 0; i < newContent.contents.length; i++) {
+        const file = newContent.contents[i]?.file;
+        if (file) {
+          objectNameList.push(newContent.contents[i].objectName);
+          FileList.push(file);
         }
-      });
+      }
       const transformedContent = {
         description: newContent.description,
         startDate: newContent.startDate,
         endDate: newContent.endDate,
         contents: newContent.contents
-          .filter((item) => item.objectPath)
-          .map((content) => ({
-            type: content.type,
-            objectPath: content.objectPath,
-          })),
+          .map((content) => content.objectName)
+          .filter((item) => item),
       };
 
-      await Promise.all(uploadPromises);
+      await handleMultipleUpload(FileList);
       const createdPost = await createPost(userInfo.pid, {
         boardName: boardId,
         title: newContent.title,
@@ -137,7 +133,11 @@ export const AdvertisementPage = ({ boardId }: { boardId: BoardName }) => {
 
   const handleClickEdit = () => {
     if (!selectedBoard) return;
-    const newContent = deepCopy(selectedBoard.content as Advertisements);
+    const newContent = deepCopy(
+      selectedBoard.content as Partial<
+        Posts<typeof boardId>
+      > as IAdvertisementForm
+    );
     setNewContent({ ...newContent, title: selectedBoard.title as string });
     setBoardState("edit");
   };
@@ -154,46 +154,42 @@ export const AdvertisementPage = ({ boardId }: { boardId: BoardName }) => {
     if (!userInfo?.pid || !selectedBoard || isProcessingRef.current) return;
     isProcessingRef.current = true;
     try {
-      const uploadPromises: Promise<void>[] = [];
+      const originalContent = selectedBoard.content
+        .contents as Partial<ManagedContent> as ManagedContent[];
+
       const deletePromises: Promise<void>[] = [];
 
-      const originalContent = selectedBoard.content as Advertisement;
-      const modifiedContent = newContent;
-
-      // 삭제된 컨텐츠 처리
-      originalContent.contents.forEach((original) => {
-        const contentStillExists = modifiedContent.contents.some(
-          (content) => content.objectPath === original.objectPath
+      originalContent?.forEach((originalImage) => {
+        const imageStillExists = newContent.contents.some(
+          (modifiedImage) => modifiedImage.id === originalImage.id
         );
-        if (!contentStillExists) {
-          deletePromises.push(deleteImage(original.objectPath));
+        if (!imageStillExists) {
+          deletePromises.push(handleDelete(originalImage.objectName));
         }
       });
 
-      // 새로운 컨텐츠 업로드 처리
-      modifiedContent.contents.forEach((content) => {
-        if (content.file && content.uploadUrl) {
-          uploadPromises.push(uploadImage(content.uploadUrl, content.file));
-        }
-      });
+      const uploadFile = newContent.contents
+        .map((image) => image.file)
+        .filter((item) => item) as File[];
+
       const transformedContent = {
-        description: modifiedContent.description,
-        startDate: modifiedContent.startDate,
-        endDate: modifiedContent.endDate,
-        contents: modifiedContent.contents
-          .filter((item) => item.objectPath)
-          .map((content) => ({
-            type: content.type,
-            objectPath: content.objectPath,
-          })),
+        description: newContent.description,
+        startDate: newContent.startDate,
+        endDate: newContent.endDate,
+        contents: newContent.contents
+          .map((content) => content.objectName)
+          .filter((item) => item),
       };
 
-      await Promise.all([...uploadPromises, ...deletePromises]);
+      await Promise.allSettled([
+        handleMultipleUpload(uploadFile),
+        ...deletePromises,
+      ]);
 
       const editedPost = await updatePost(userInfo.pid, {
         ...selectedBoard,
         boardName: boardId,
-        title: modifiedContent.title,
+        title: newContent.title,
         content: transformedContent,
       });
 
@@ -201,7 +197,11 @@ export const AdvertisementPage = ({ boardId }: { boardId: BoardName }) => {
         prev.map((item) => (item.id === editedPost.id ? editedPost : item))
       );
 
-      setSelectedBoard({ ...selectedBoard, content: newContent } as Posts);
+      setSelectedBoard({
+        ...selectedBoard,
+        title: newContent.title,
+        content: newContent,
+      } as Partial<IAdvertisementForm> as Posts<typeof boardId>);
       setBoardState("detail");
     } catch (error) {
       console.error("광고 수정 실패:", error);
@@ -210,41 +210,27 @@ export const AdvertisementPage = ({ boardId }: { boardId: BoardName }) => {
     }
   };
 
-  const handleItemDetail = async (post: Posts) => {
+  const handleItemDetail = async (post: Posts<typeof boardId>) => {
     if (isProcessingRef.current) return;
     isProcessingRef.current = true;
     try {
-      const content = post.content as Advertisement;
+      const objectNameList = post.content.contents;
 
-      // contents 배열의 각 항목에 대해 다운로드 URL 가져오기
-      if (content.contents && content.contents.length > 0) {
-        const downloadUrlPromises = content.contents.map((object) =>
-          getDownloadUrl(object.objectPath)
-        );
-        const downloadUrls = await Promise.all(downloadUrlPromises);
-
-        // 새로운 ContentItem 배열 생성
-        const newContents: ContentItem[] = downloadUrls.map(
-          (preview, index) => ({
-            id: Math.random().toString(36).substring(4),
-            type: content.contents[index].type, // 파일 확장자로 타입 추정
-            objectPath: content.contents[index].objectPath,
-            preview,
-          })
-        );
-
-        const contentWithPreviews = {
-          ...content,
-          contents: newContents,
-        };
-
-        setSelectedBoard({
-          ...post,
-          content: contentWithPreviews,
-        });
-      } else {
-        setSelectedBoard(post);
+      if (objectNameList?.length && typeof objectNameList[0] === "string") {
+        const items = await downloadMultipleFiles(objectNameList);
+        const target = post.content as Partial<
+          Posts<typeof boardId>
+        > as IAdvertisementForm;
+        target.contents = items.map((item, index) => ({
+          id: Math.random().toString(36).substring(4),
+          preview: window.URL.createObjectURL(item),
+          objectName: objectNameList[index],
+          file: undefined,
+          type: item.type,
+        }));
       }
+
+      setSelectedBoard(post);
       setBoardState("detail");
     } catch {
       toast({
@@ -264,7 +250,7 @@ export const AdvertisementPage = ({ boardId }: { boardId: BoardName }) => {
         return (
           <AdvertisementForm
             initialData={newContent}
-            onSubmit={(data: Advertisements) => {
+            onSubmit={(data: IAdvertisementForm) => {
               setNewContent(data);
             }}
             userPID={userInfo!.pid}
@@ -275,7 +261,9 @@ export const AdvertisementPage = ({ boardId }: { boardId: BoardName }) => {
           return (
             <AdvertisementForm
               initialData={{
-                ...(selectedBoard.content as Advertisements),
+                ...(selectedBoard.content as Partial<
+                  Posts<typeof boardId>
+                > as IAdvertisementForm),
                 title: selectedBoard.title as string,
               }}
               onSubmit={() => {}}
@@ -289,7 +277,7 @@ export const AdvertisementPage = ({ boardId }: { boardId: BoardName }) => {
         return (
           <div className="space-y-2.5">
             {boardList.map((post) => {
-              const content = post.content as Advertisements;
+              const content = post.content;
               return (
                 <Card
                   key={post.id}

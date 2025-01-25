@@ -23,7 +23,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import imageCompression from "browser-image-compression";
-import { getPresignedUrl } from "@/apis/minio/images";
+import { getObjectName } from "@/apis/minio";
 
 interface Newcomers {
   leader: string;
@@ -43,31 +43,11 @@ interface Newcomers {
   boardName: "newcomer" | "absenteeism" | "promotion";
   promotionEnd: boolean;
   image?: {
-    uploadUrl?: string;
     file?: File;
     preview: string;
     objectName: string;
   };
 }
-const initValue: Newcomers = {
-  leader: "",
-  name: "",
-  pear: 0,
-  phone: "",
-  job: "",
-  churchName: "",
-  pastorVisited: false,
-  promotionEnd: false,
-  newComer: false,
-  baptism: false,
-  registrationDate: "",
-  registrationReason: "",
-  notes: [],
-  absence: "",
-  climbing: "",
-  boardName: "newcomer",
-};
-
 interface NewcomersFormProps {
   initialData: Newcomers;
   onSubmit: (data: Newcomers) => void;
@@ -82,7 +62,7 @@ const formatDate = (date: Date): string => {
 };
 
 export const NewcomerForm: React.FC<NewcomersFormProps> = ({
-  initialData = initValue,
+  initialData,
   onSubmit,
   userPID,
 }) => {
@@ -91,14 +71,6 @@ export const NewcomerForm: React.FC<NewcomersFormProps> = ({
   useEffect(() => {
     onSubmit(formData);
   }, [formData, onSubmit]);
-
-  useEffect(() => {
-    return () => {
-      if (formData.image?.preview && formData.image?.uploadUrl) {
-        URL.revokeObjectURL(formData.image.preview);
-      }
-    };
-  }, []);
 
   const handleYearChange = (year: string) => {
     setFormData((prev) => ({
@@ -144,18 +116,21 @@ export const NewcomerForm: React.FC<NewcomersFormProps> = ({
         maxWidthOrHeight: 512,
         initialQuality: 0.8,
       });
-      const { url, objectName } = await getPresignedUrl(
-        userPID,
-        compressedFile.name
+      const newName = getObjectName(userPID, file.name);
+
+      const renamedFile = new File(
+        [compressedFile],
+        encodeURIComponent(newName),
+        {
+          type: compressedFile.type,
+        }
       );
-      const objectUrl = URL.createObjectURL(compressedFile);
       setFormData((prev) => ({
         ...prev,
         image: {
-          uploadUrl: url,
-          file: compressedFile,
-          preview: objectUrl,
-          objectName,
+          file: renamedFile,
+          preview: URL.createObjectURL(compressedFile),
+          objectName: newName,
         },
       }));
     } catch (error) {
@@ -197,7 +172,7 @@ export const NewcomerForm: React.FC<NewcomersFormProps> = ({
                   if (fileInputRef.current) {
                     fileInputRef.current.value = "";
                   }
-                  if (formData.image?.preview && formData.image?.uploadUrl) {
+                  if (formData.image?.preview && formData.image?.preview) {
                     URL.revokeObjectURL(formData.image.preview);
                   }
                   setFormData((prev) => ({

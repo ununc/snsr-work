@@ -2,6 +2,7 @@ import { useState } from "react";
 import { X, Download, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { createPortal } from "react-dom";
+import { extractFileName } from "@/apis/minio";
 
 interface ImageViewerProps {
   images: { preview: string; objectName: string }[];
@@ -30,16 +31,15 @@ export const ImageViewer = ({
 
   const handleDownload = async () => {
     try {
-      const response = await fetch(images[currentIndex].preview);
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
+      const url = images[currentIndex].preview;
       const link = document.createElement("a");
       link.href = url;
-      link.download = images[currentIndex].objectName;
+      link.download = extractFileName(
+        decodeURIComponent(images[currentIndex].objectName)
+      );
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error("Download failed:", error);
     }

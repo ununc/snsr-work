@@ -1,6 +1,10 @@
-import { BoardName, Posts, PostTextMatcher } from "@/api-models/post";
+import { Posts, PostTextMatcher } from "@/api-models/post";
 import type { Newcomer } from "@/api-models/sub";
-import { deleteImage, getDownloadUrl, uploadImage } from "@/apis/minio/images";
+import {
+  downloadSingleFile,
+  handleDelete,
+  handleFileUpload,
+} from "@/apis/minio";
 import {
   createPost,
   getBoardAllPostList,
@@ -46,7 +50,6 @@ interface Newcomers {
   climbing?: string;
   boardName: "newcomer" | "absenteeism" | "promotion";
   image?: {
-    uploadUrl?: string;
     file?: File;
     preview: string;
     objectName: string;
@@ -77,9 +80,9 @@ const calculateRows = (text: string) => {
   return (text.match(/\n/g) || []).length + 1;
 };
 
-export const NewcomerPage = ({ boardId }: { boardId: BoardName }) => {
+export const NewcomerPage = ({ boardId }: { boardId: "newcomer" }) => {
   const [boardState, setBoardState] = useState<OnlyBoardState>("list");
-  const [boardList, setBoardList] = useState<Posts[]>([]);
+  const [boardList, setBoardList] = useState<Posts<typeof boardId>[]>([]);
   const [newContent, setNewContent] = useState(initValue);
   const [newEdu, setNewEdu] = useState<string[]>([]);
   const [newComment, setNewComment] = useState<string>("");
@@ -94,7 +97,28 @@ export const NewcomerPage = ({ boardId }: { boardId: BoardName }) => {
     setBoardState("create");
   };
 
-  const handleStateChange = async (newState: OnlyBoardState, post: Posts) => {
+  const isEmpty = (info: Newcomers): boolean => {
+    const fieldsToCheck: (keyof Newcomers)[] = [
+      "leader",
+      "name",
+      "registrationDate",
+      "pear",
+    ];
+
+    return fieldsToCheck.some((field) => {
+      if (typeof info[field] === "string") {
+        return (info[field] as string).trim() === "";
+      } else if (typeof info[field] === "number") {
+        return info[field] === 0;
+      }
+      return false;
+    });
+  };
+
+  const handleStateChange = async (
+    newState: OnlyBoardState,
+    post: Posts<typeof boardId>
+  ) => {
     if (isProcessingRef.current) return;
     isProcessingRef.current = true;
 
@@ -113,9 +137,9 @@ export const NewcomerPage = ({ boardId }: { boardId: BoardName }) => {
         if (!(post.content as Newcomers)?.image) {
           const image = (post.content as Newcomer)?.objectName;
           if (image) {
-            const url = await getDownloadUrl(image);
+            const item = await downloadSingleFile(image);
             (post.content as Newcomers).image = {
-              preview: url,
+              preview: window.URL.createObjectURL(item!),
               objectName: image,
             };
           }
@@ -140,14 +164,22 @@ export const NewcomerPage = ({ boardId }: { boardId: BoardName }) => {
   };
 
   const createRequest = async () => {
+    if (isEmpty(newContent)) {
+      toast({
+        title: "빈 필드가 존재합니다.",
+        variant: "destructive",
+        duration: 2000,
+      });
+      return;
+    }
     if (!userInfo?.pid || isProcessingRef.current) return;
     isProcessingRef.current = true;
 
     try {
       let objectName = "";
-      if (newContent.image?.uploadUrl && newContent.image?.file) {
+      if (newContent.image?.file) {
         objectName = newContent.image.objectName;
-        await uploadImage(newContent.image.uploadUrl, newContent.image.file);
+        await handleFileUpload(newContent.image.file);
       }
 
       const item = deepCopy(newContent);
@@ -173,6 +205,7 @@ export const NewcomerPage = ({ boardId }: { boardId: BoardName }) => {
           return dateA - dateB;
         });
       });
+      setBoardState("list");
     } catch {
       toast({
         title: "생성 실패",
@@ -185,23 +218,30 @@ export const NewcomerPage = ({ boardId }: { boardId: BoardName }) => {
   };
 
   const editRequest = async () => {
+    if (isEmpty(newContent)) {
+      toast({
+        title: "빈 필드가 존재합니다.",
+        variant: "destructive",
+        duration: 2000,
+      });
+      return;
+    }
     if (!userInfo?.pid || isProcessingRef.current) return;
     isProcessingRef.current = true;
     try {
       const imageProcessPromises: Promise<void>[] = [];
-      let objectName = (newContent as Newcomer).objectName ?? "";
-      if (newContent.image?.uploadUrl && newContent.image?.file) {
-        if (objectName) {
-          imageProcessPromises.push(
-            deleteImage((newContent as Newcomer).objectName as string)
-          );
-        }
-        objectName = newContent.image.objectName;
-        imageProcessPromises.push(
-          uploadImage(newContent.image.uploadUrl, newContent.image.file)
-        );
+      const originalObjectName = (newContent as Newcomer).objectName ?? "";
+
+      // 새로운 파일인지 판단
+      if (originalObjectName && newContent.image?.file) {
+        imageProcessPromises.push(handleDelete(originalObjectName));
       }
-      await Promise.all(imageProcessPromises);
+
+      let objectName = "";
+      if (newContent.image?.file) {
+        objectName = newContent.image.objectName;
+        imageProcessPromises.push(handleFileUpload(newContent.image.file));
+      }
 
       const item = deepCopy(newContent);
       const title = item.name;
@@ -211,9 +251,10 @@ export const NewcomerPage = ({ boardId }: { boardId: BoardName }) => {
       delete item.name;
       delete item.image;
 
-      const editedPost = await updatePartOfPost(userInfo.pid, {
+      await Promise.all(imageProcessPromises);
+      const editedPost = await updatePartOfPost<typeof boardId>(userInfo.pid, {
         id: selectedId,
-        boardName: "newcomer",
+        boardName: boardId,
         title,
         targetDate,
         content: { ...item, objectName },
@@ -222,6 +263,7 @@ export const NewcomerPage = ({ boardId }: { boardId: BoardName }) => {
       setBoardList((prev) =>
         prev.map((item) => (item.id === editedPost.id ? editedPost : item))
       );
+      setBoardState("list");
     } catch {
       toast({
         title: "생성 실패",
@@ -244,15 +286,16 @@ export const NewcomerPage = ({ boardId }: { boardId: BoardName }) => {
       delete item.name;
       delete item.image;
 
-      const editedPost = await updatePartOfPost(userInfo.pid, {
+      const editedPost = await updatePartOfPost<typeof boardId>(userInfo.pid, {
         id: selectedId,
-        boardName: "newcomer",
+        boardName: boardId,
         content: { ...item, notes: [...newEdu, newComment] },
       });
 
       setBoardList((prev) =>
         prev.map((item) => (item.id === editedPost.id ? editedPost : item))
       );
+      setBoardState("list");
     } catch {
       toast({
         title: "요청 실패",
@@ -281,6 +324,7 @@ export const NewcomerPage = ({ boardId }: { boardId: BoardName }) => {
       });
 
       setBoardList((prev) => prev.filter((item) => item.id !== editedPost.id));
+      setBoardState("list");
     } catch {
       toast({
         title: "요청 실패",
@@ -309,6 +353,7 @@ export const NewcomerPage = ({ boardId }: { boardId: BoardName }) => {
       });
 
       setBoardList((prev) => prev.filter((item) => item.id !== editedPost.id));
+      setBoardState("list");
     } catch {
       toast({
         title: "요청 실패",
@@ -339,7 +384,6 @@ export const NewcomerPage = ({ boardId }: { boardId: BoardName }) => {
           absenceRequest();
           break;
       }
-      setBoardState("list");
     } catch (error) {
       console.error("Creation failed:", error);
       toast({
@@ -469,7 +513,7 @@ export const NewcomerPage = ({ boardId }: { boardId: BoardName }) => {
         return (
           <div className="space-y-2.5">
             {boardList.map((post) => {
-              const content = post.content as Newcomer;
+              const content = post.content;
               return (
                 <Card
                   key={post.id}

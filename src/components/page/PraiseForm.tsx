@@ -4,42 +4,19 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { TrashIcon, ImageIcon, CopyIcon } from "lucide-react";
-import { getPresignedUrl } from "@/apis/minio/images";
 import { ImageViewer } from "./ImageViewr";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import imageCompression from "browser-image-compression";
-
-interface SongItem {
-  id: string;
-  file?: File;
-  preview: string;
-  uploadUrl?: string;
-  objectName: string;
-}
-
-interface Song {
-  id: string;
-  title: string;
-  lyrics: string;
-  images?: SongItem[];
-  link?: string;
-}
-
-interface SongItemWithoutImages {
-  kind: "찬양" | "특송" | "봉헌" | "끝송";
-  description: string;
-  songs: Song[];
-}
+import { IPraiseForm, KINDS, PraiseKind, SongItem } from "@/api-models/sub";
+import { getObjectName } from "@/apis/minio";
 
 interface PraiseFormProps {
-  initialData: SongItemWithoutImages;
-  onSubmit: (data: SongItemWithoutImages) => void;
+  initialData: IPraiseForm;
+  onSubmit: (data: IPraiseForm) => void;
   userPID: string;
   readonly?: boolean;
 }
-
-const KINDS = ["찬양", "특송", "봉헌", "끝송"] as const;
 
 const calculateRows = (text: string) => {
   if (!text) return 1;
@@ -54,7 +31,7 @@ export const PraiseForm: React.FC<PraiseFormProps> = ({
   userPID,
   readonly = false,
 }) => {
-  const [formData, setFormData] = useState<SongItemWithoutImages>(initialData);
+  const [formData, setFormData] = useState(initialData);
   const [viewerOpen, setViewerOpen] = useState(false);
   const [selectedSongIndex, setSelectedSongIndex] = useState(0);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
@@ -75,7 +52,7 @@ export const PraiseForm: React.FC<PraiseFormProps> = ({
     }
   }, [readonly, initialData]);
 
-  const handleKindChange = (kind: (typeof KINDS)[number]) => {
+  const handleKindChange = (kind: PraiseKind) => {
     setFormData((prev) => ({
       ...prev,
       kind,
@@ -91,7 +68,7 @@ export const PraiseForm: React.FC<PraiseFormProps> = ({
 
   const handleSongChange = (
     index: number,
-    field: keyof Song,
+    field: keyof SongItem,
     value: string
   ) => {
     if (readonly) return;
@@ -107,29 +84,31 @@ export const PraiseForm: React.FC<PraiseFormProps> = ({
     songIndex: number,
     e: ChangeEvent<HTMLInputElement>
   ) => {
-    if (readonly) return;
     const files = e.target.files;
     if (!files) return;
 
     try {
-      const newImages: SongItem[] = await Promise.all(
+      const newImages = await Promise.all(
         Array.from(files).map(async (file) => {
           const compressedFile = await imageCompression(file, {
-            maxSizeMB: 0.6,
+            maxSizeMB: 0.7,
             maxWidthOrHeight: 1024,
             initialQuality: 0.8,
           });
 
-          const { url, objectName } = await getPresignedUrl(
-            userPID,
-            compressedFile.name
+          const newName = getObjectName(userPID, file.name);
+
+          const renamedFile = new File(
+            [compressedFile],
+            encodeURIComponent(newName), // 여기서 원하는 파일명 형식으로 지정
+            { type: compressedFile.type }
           );
+
           return {
             id: Math.random().toString(36).substring(4),
-            file,
+            file: renamedFile,
             preview: URL.createObjectURL(compressedFile),
-            uploadUrl: url,
-            objectName: objectName,
+            objectName: newName,
           };
         })
       );
@@ -192,9 +171,11 @@ export const PraiseForm: React.FC<PraiseFormProps> = ({
   };
 
   const handleImageClick = (songIndex: number, imageIndex: number) => {
-    setSelectedSongIndex(songIndex);
-    setSelectedImageIndex(imageIndex);
-    setViewerOpen(true);
+    if (readonly) {
+      setSelectedSongIndex(songIndex);
+      setSelectedImageIndex(imageIndex);
+      setViewerOpen(true);
+    }
   };
 
   return (

@@ -5,48 +5,32 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import {
   CalendarIcon,
+  Download,
+  FileCheck2,
   FileIcon,
+  FileSpreadsheetIcon,
   ImageIcon,
+  MusicIcon,
+  PanelLeftDashed,
+  Tablet,
   TrashIcon,
   VideoIcon,
 } from "lucide-react";
-import { getPresignedUrl } from "@/apis/minio/images";
-import { ContentType, Advertisement } from "@/api-models/sub";
+import type { IAdvertisementForm, ManagedContent } from "@/api-models/sub";
 import { Calendar } from "@/components/ui/calendar";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { ContentViewer } from "./ContentViewer";
-
-interface ContentItem {
-  id: string;
-  type: ContentType;
-  objectPath: string;
-  file?: File;
-  preview: string;
-  uploadUrl?: string;
-}
-interface Advertisements extends Advertisement {
-  contents: ContentItem[];
-  title: string;
-}
+import { extractFileName, getObjectName } from "@/apis/minio";
 
 interface AdvertisementsFormProps {
-  initialData: Advertisements;
-  onSubmit: (data: Advertisements) => void;
+  initialData: IAdvertisementForm;
+  onSubmit: (data: IAdvertisementForm) => void;
   userPID: string;
   readonly?: boolean;
 }
-
-const initValue: Advertisements = {
-  title: "",
-  description: "",
-  startDate: "",
-  endDate: "",
-  contents: [],
-};
 
 const formatDate = (date: Date): string => {
   const year = date.getFullYear();
@@ -69,15 +53,18 @@ const parseDate = (dateStr: string): Date | undefined => {
   return isNaN(date.getTime()) ? undefined : date;
 };
 
+const calculateRows = (text: string) => {
+  if (!text) return 1;
+  return (text.match(/\n/g) || []).length + 1;
+};
+
 export const AdvertisementForm: React.FC<AdvertisementsFormProps> = ({
-  initialData = initValue,
+  initialData,
   onSubmit,
   userPID,
   readonly = false,
 }) => {
-  const [formData, setFormData] = useState<Advertisements>(initialData);
-  const [viewerOpen, setViewerOpen] = useState(false);
-  const [selectedContentIndex, setSelectedContentIndex] = useState(0);
+  const [formData, setFormData] = useState(initialData);
 
   const [startDateObj, setStartDateObj] = useState<Date | undefined>(
     parseDate(formData.startDate)
@@ -101,7 +88,7 @@ export const AdvertisementForm: React.FC<AdvertisementsFormProps> = ({
   }, [readonly, initialData]);
 
   const handleChange = (
-    field: keyof Advertisements,
+    field: keyof IAdvertisementForm,
     e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     if (readonly) return;
@@ -145,34 +132,27 @@ export const AdvertisementForm: React.FC<AdvertisementsFormProps> = ({
     if (!files) return;
 
     try {
-      const newContents: ContentItem[] = await Promise.all(
+      const newContents = await Promise.all(
         Array.from(files).map(async (file) => {
-          const { url, objectName } = await getPresignedUrl(userPID, file.name);
-          let type: ContentType;
+          const newName = getObjectName(userPID, file.name);
 
-          if (file.type.startsWith("image/")) {
-            type = ContentType.IMAGE;
-          } else if (file.type.startsWith("video/")) {
-            type = ContentType.VIDEO;
-          } else {
-            type = ContentType.DOCUMENT;
-          }
+          const renamedFile = new File([file], encodeURIComponent(newName), {
+            type: file.type,
+          });
 
           return {
             id: Math.random().toString(36).substring(4),
-            type,
-            file,
-            preview:
-              type === ContentType.IMAGE ? URL.createObjectURL(file) : "",
-            uploadUrl: url,
-            objectPath: objectName,
+            file: renamedFile,
+            preview: URL.createObjectURL(file),
+            objectName: newName,
+            type: renamedFile.type,
           };
         })
       );
 
       setFormData((prev) => ({
         ...prev,
-        contents: [...prev.contents, ...newContents],
+        contents: [...(prev.contents || []), ...newContents],
       }));
     } catch (error) {
       console.error("Error getting presigned URLs:", error);
@@ -183,34 +163,115 @@ export const AdvertisementForm: React.FC<AdvertisementsFormProps> = ({
     if (readonly) return;
     setFormData((prev) => ({
       ...prev,
-      contents: prev.contents.filter((content) => content.id !== contentId),
+      contents: (prev.contents || []).filter(
+        (content) => content.id !== contentId
+      ),
     }));
   };
 
-  const handleContentClick = (contentIndex: number) => {
-    if (
-      readonly &&
-      formData.contents[contentIndex].type === ContentType.IMAGE
+  const handleDownload = async (content: ManagedContent) => {
+    try {
+      const url = content.preview;
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = extractFileName(decodeURIComponent(content.objectName));
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error("Download failed:", error);
+    }
+  };
+
+  const mimeTypeTemplate = (content: ManagedContent) => {
+    const type = content.type;
+    if (!type) return;
+    if (type.includes("image")) {
+      return (
+        <img
+          src={content.preview}
+          alt="Preview"
+          className="w-full h-96 object-contain"
+        />
+      );
+    } else if (type.includes("video")) {
+      return (
+        <div className="w-full pl-3 pr-8 h-24 flex items-center justify-center bg-gray-100">
+          <VideoIcon className="w-6 h-6" />
+          <span className="ml-2">
+            {extractFileName(decodeURIComponent(content.objectName))}
+          </span>
+        </div>
+      );
+    } // PDF 파일
+    else if (type.includes("pdf")) {
+      return (
+        <div className="w-full pl-3 pr-8 h-24 flex items-center justify-center bg-gray-100">
+          <FileCheck2 className="w-6 h-6" />
+          <span className="ml-2">
+            {extractFileName(decodeURIComponent(content.objectName))}
+          </span>
+        </div>
+      );
+    }
+
+    // 오디오 파일
+    else if (type.includes("audio")) {
+      return (
+        <div className="w-full pl-3 pr-8 h-24 flex items-center justify-center bg-gray-100">
+          <MusicIcon className="w-6 h-6" />
+          <span className="ml-2">
+            {extractFileName(decodeURIComponent(content.objectName))}
+          </span>
+        </div>
+      );
+    }
+
+    // 워드 문서
+    else if (type.includes("msword") || type.includes("wordprocessingml")) {
+      return (
+        <div className="w-full pl-3 pr-8 h-24 flex items-center justify-center bg-gray-100">
+          <Tablet className="w-6 h-6" />
+          <span className="ml-2">
+            {extractFileName(decodeURIComponent(content.objectName))}
+          </span>
+        </div>
+      );
+    }
+
+    // 엑셀 문서
+    else if (type.includes("ms-excel") || type.includes("spreadsheetml")) {
+      return (
+        <div className="w-full pl-3 pr-8 h-24 flex items-center justify-center bg-gray-100">
+          <FileSpreadsheetIcon className="w-6 h-6" />
+          <span className="ml-2">
+            {extractFileName(decodeURIComponent(content.objectName))}
+          </span>
+        </div>
+      );
+    }
+
+    // PowerPoint 문서
+    else if (
+      type.includes("ms-powerpoint") ||
+      type.includes("presentationml")
     ) {
-      setSelectedContentIndex(contentIndex);
-      setViewerOpen(true);
+      return (
+        <div className="w-full pl-3 pr-8 h-24 flex items-center justify-center bg-gray-100">
+          <PanelLeftDashed className="w-6 h-6" />
+          <span className="ml-2">
+            {extractFileName(decodeURIComponent(content.objectName))}
+          </span>
+        </div>
+      );
+    } else {
+      <div className="w-full h-28 flex items-center justify-center bg-gray-100">
+        <FileIcon className="w-4 h-4" />;
+        <span className="ml-2">
+          {extractFileName(decodeURIComponent(content.objectName))}
+        </span>
+      </div>;
     }
-  };
-
-  const getContentIcon = (type: ContentType) => {
-    switch (type) {
-      case ContentType.IMAGE:
-        return <ImageIcon className="w-4 h-4" />;
-      case ContentType.VIDEO:
-        return <VideoIcon className="w-4 h-4" />;
-      case ContentType.DOCUMENT:
-        return <FileIcon className="w-4 h-4" />;
-    }
-  };
-
-  const calculateRows = (text: string) => {
-    if (!text) return 1;
-    return (text.match(/\n/g) || []).length + 1;
   };
 
   return (
@@ -232,7 +293,7 @@ export const AdvertisementForm: React.FC<AdvertisementsFormProps> = ({
           placeholder="상세 내용을 입력하세요"
           value={formData.description}
           onChange={(e) => handleChange("description", e)}
-          rows={calculateRows(formData.description)}
+          rows={readonly ? calculateRows(formData.description) : 5}
           readOnly={readonly}
           className={readonly ? "bg-gray-50" : ""}
         />
@@ -355,25 +416,22 @@ export const AdvertisementForm: React.FC<AdvertisementsFormProps> = ({
         </div>
 
         <div className="space-y-6">
-          {formData.contents.map((content, index) => (
+          {formData.contents.map((content) => (
             <div
               key={content.id}
               className="relative border rounded-lg overflow-hidden"
-              onClick={() => handleContentClick(index)}
             >
-              {content.type === ContentType.IMAGE ? (
-                <img
-                  src={content.preview}
-                  alt="Preview"
-                  className="w-full h-96 object-contain"
-                />
+              {mimeTypeTemplate(content)}
+              {readonly ? (
+                <Button
+                  onClick={() => handleDownload(content)}
+                  variant="outline"
+                  size="icon"
+                  className="bg-white/80 absolute p-2 top-2 right-2"
+                >
+                  <Download className="h-4 w-4" />
+                </Button>
               ) : (
-                <div className="w-full h-28 flex items-center justify-center bg-gray-100">
-                  {getContentIcon(content.type)}
-                  <span className="ml-2">{content.file?.name}</span>
-                </div>
-              )}
-              {!readonly && (
                 <Button
                   type="button"
                   variant="destructive"
@@ -391,14 +449,6 @@ export const AdvertisementForm: React.FC<AdvertisementsFormProps> = ({
           ))}
         </div>
       </div>
-      {readonly && (
-        <ContentViewer
-          contents={formData.contents}
-          isOpen={viewerOpen}
-          onClose={() => setViewerOpen(false)}
-          initialIndex={selectedContentIndex}
-        />
-      )}
     </div>
   );
 };

@@ -4,47 +4,30 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { ImageIcon, TrashIcon } from "lucide-react";
-import { getPresignedUrl } from "@/apis/minio/images";
 import { ImageViewer } from "./ImageViewr";
-
-interface ImageItem {
-  id: string;
-  file?: File;
-  preview: string;
-  uploadUrl?: string;
-  objectName: string;
-}
-
-interface LiturgyWithoutImages {
-  preach: string;
-  bibleVerses: string;
-  continuity: string;
-  hymn: string;
-  images?: ImageItem[];
-}
-
-const initValue: LiturgyWithoutImages = {
-  preach: "",
-  bibleVerses: "",
-  continuity: "",
-  hymn: "",
-  images: [],
-};
+import type { ILiturgyForm } from "@/api-models/sub";
+import imageCompression from "browser-image-compression";
+import { getObjectName } from "@/apis/minio";
 
 interface LiturgyFormProps {
-  initialData: LiturgyWithoutImages;
-  onSubmit: (data: LiturgyWithoutImages) => void;
+  initialData: ILiturgyForm;
+  onSubmit: (data: ILiturgyForm) => void;
   userPID: string;
   readonly?: boolean;
 }
 
+const calculateRows = (text: string) => {
+  if (!text) return 1;
+  return (text.match(/\n/g) || []).length + 1;
+};
+
 export const LiturgyForm: React.FC<LiturgyFormProps> = ({
-  initialData = initValue,
+  initialData,
   onSubmit,
   userPID,
   readonly = false,
 }) => {
-  const [formData, setFormData] = useState<LiturgyWithoutImages>(initialData);
+  const [formData, setFormData] = useState(initialData);
   const [viewerOpen, setViewerOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
 
@@ -61,7 +44,7 @@ export const LiturgyForm: React.FC<LiturgyFormProps> = ({
   }, [readonly, initialData]);
 
   const handleChange = (
-    field: keyof LiturgyWithoutImages,
+    field: keyof ILiturgyForm,
     e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     if (readonly) return;
@@ -77,15 +60,29 @@ export const LiturgyForm: React.FC<LiturgyFormProps> = ({
     if (!files) return;
 
     try {
-      const newImages: ImageItem[] = await Promise.all(
+      const newImages = await Promise.all(
         Array.from(files).map(async (file) => {
-          const { url, objectName } = await getPresignedUrl(userPID, file.name);
+          const compressedFile = await imageCompression(file, {
+            maxSizeMB: 0.7,
+            maxWidthOrHeight: 1024,
+            initialQuality: 0.8,
+          });
+
+          const newName = getObjectName(userPID, file.name);
+
+          const renamedFile = new File(
+            [compressedFile],
+            encodeURIComponent(newName),
+            {
+              type: compressedFile.type,
+            }
+          );
+
           return {
             id: Math.random().toString(36).substring(4),
-            file,
-            preview: URL.createObjectURL(file),
-            uploadUrl: url,
-            objectName: objectName,
+            file: renamedFile,
+            preview: URL.createObjectURL(compressedFile),
+            objectName: newName,
           };
         })
       );
@@ -108,16 +105,12 @@ export const LiturgyForm: React.FC<LiturgyFormProps> = ({
   };
 
   const handleImageClick = (imageIndex: number) => {
-    if (readonly && formData.images?.length) {
+    if (readonly) {
       setSelectedImageIndex(imageIndex);
       setViewerOpen(true);
     }
   };
 
-  const calculateRows = (text: string) => {
-    if (!text) return 1;
-    return (text.match(/\n/g) || []).length + 1;
-  };
   return (
     <div className="space-y-6 mb-6">
       <div className="mb-4">
@@ -148,7 +141,7 @@ export const LiturgyForm: React.FC<LiturgyFormProps> = ({
           placeholder="시편 96:5-6"
           value={formData.continuity}
           onChange={(e) => handleChange("continuity", e)}
-          rows={calculateRows(formData.continuity)}
+          rows={readonly ? calculateRows(formData.continuity) : 5}
           readOnly={readonly}
           className={readonly ? "bg-gray-50" : ""}
         />

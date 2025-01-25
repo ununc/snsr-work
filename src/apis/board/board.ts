@@ -70,18 +70,6 @@ export const deleteBoard = async (
   return data;
 };
 
-// 전체 보드의 템플릿 요청
-export const getBoardTemplates = async (
-  boardId: string
-): Promise<ResponseBoardDto[]> => {
-  const { data } = await apiClient.get("boards/temp", {
-    params: {
-      boardId,
-    },
-  });
-  return data;
-};
-
 // 해당 월의 보드 요청
 export const getBoardsSplit = async (
   boardId: string,

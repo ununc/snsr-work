@@ -1,6 +1,10 @@
-import { BoardName, Posts, PostTextMatcher } from "@/api-models/post";
-import type { Praise } from "@/api-models/sub";
-import { deleteImage, getDownloadUrl, uploadImage } from "@/apis/minio/images";
+import { type Posts, PostTextMatcher } from "@/api-models/post";
+import type { IPraiseForm } from "@/api-models/sub";
+import {
+  downloadMultipleFiles,
+  handleDelete,
+  handleMultipleUpload,
+} from "@/apis/minio";
 import { createPost, getPostList, updatePost } from "@/apis/posts/posts";
 import { PraiseForm } from "@/components/page/PraiseForm";
 import { MonthController } from "@/components/post/MonthController";
@@ -13,23 +17,7 @@ import { deepCopy } from "@/util/deepCopy";
 import { Clock } from "lucide-react";
 import { useRef, useState } from "react";
 
-type SongItemWithoutImages = Omit<Praise, "songs"> & {
-  songs: {
-    id: string;
-    title: string;
-    lyrics: string;
-    images?: {
-      id: string;
-      file?: File;
-      preview: string;
-      uploadUrl?: string;
-      objectName: string;
-    }[];
-    link?: string;
-  }[];
-};
-
-const initValue: SongItemWithoutImages = {
+const initValue: IPraiseForm = {
   kind: "찬양",
   description: "", // 말씀 제목
   songs: Array(4)
@@ -43,14 +31,17 @@ const initValue: SongItemWithoutImages = {
     })),
 };
 
-export const PraisePage = ({ boardId }: { boardId: BoardName }) => {
+export const PraisePage = ({ boardId }: { boardId: "praise" }) => {
   const [boardState, setBoardState] = useState<
     "list" | "detail" | "create" | "edit"
   >("list");
 
-  const [boardList, setBoardList] = useState<Posts[]>([]);
-  const [selectedBoard, setSelectedBoard] = useState<Posts | null>(null);
+  const [boardList, setBoardList] = useState<Posts<typeof boardId>[]>([]);
+  const [selectedBoard, setSelectedBoard] = useState<Posts<
+    typeof boardId
+  > | null>(null);
   const [selectedListDate, setSelectedListDate] = useState<Date>(new Date());
+
   const [newContent, setNewContent] = useState(initValue);
   const [selectedNewContentDate, setSelectedNewContentDate] =
     useState<Date | null>(null);
@@ -96,17 +87,16 @@ export const PraisePage = ({ boardId }: { boardId: BoardName }) => {
       const filteredSong = newContent.songs.filter(
         (song) => song.title && song.lyrics
       );
-      const uploadPromises: Promise<void>[] = [];
+      const uploadPromises: File[] = [];
 
       filteredSong.forEach((song) => {
         song.images?.forEach((image) => {
-          if (image.objectName && image.file) {
-            uploadPromises.push(
-              uploadImage(image.uploadUrl as string, image.file)
-            );
+          if (image.file) {
+            uploadPromises.push(image.file);
           }
         });
       });
+
       const transformedContent = {
         kind: newContent.kind,
         description: newContent.description,
@@ -122,7 +112,7 @@ export const PraisePage = ({ boardId }: { boardId: BoardName }) => {
         })),
       };
 
-      await Promise.all(uploadPromises);
+      await handleMultipleUpload(uploadPromises);
       const createdPost = await createPost(userInfo.pid, {
         boardName: boardId,
         targetDate: selectedNewContentDate?.toLocaleDateString("fr-CA"),
@@ -155,7 +145,7 @@ export const PraisePage = ({ boardId }: { boardId: BoardName }) => {
   const handleClickEdit = () => {
     if (!selectedBoard?.targetDate) return;
     // 선택된 아이템 할당하고
-    const newContent = deepCopy(selectedBoard.content as SongItemWithoutImages);
+    const newContent = deepCopy(selectedBoard.content as IPraiseForm);
     setNewContent(newContent);
     setSelectedNewContentDate(new Date(selectedBoard.targetDate));
     setBoardState("edit");
@@ -165,16 +155,15 @@ export const PraisePage = ({ boardId }: { boardId: BoardName }) => {
     if (!userInfo?.pid || !selectedBoard || isProcessingRef.current) return;
     isProcessingRef.current = true;
     try {
-      const uploadPromises: Promise<void>[] = [];
-      const deletePromises: Promise<void>[] = [];
-
-      const originalContent = selectedBoard.content as SongItemWithoutImages;
-      const modifiedContent = newContent as SongItemWithoutImages;
-
-      const filteredSong = modifiedContent.songs.filter(
+      const filteredSong = newContent.songs.filter(
         (song) => song.title && song.lyrics
       );
-      // 원본 songs 순회
+
+      const uploadFile: File[] = [];
+      const deletePromises: Promise<void>[] = [];
+
+      const originalContent = selectedBoard.content as IPraiseForm;
+
       originalContent.songs.forEach((originalSong) => {
         // 수정된 content에서 해당 id를 가진 song을 찾음
         const modifiedSong = filteredSong.find(
@@ -184,7 +173,7 @@ export const PraisePage = ({ boardId }: { boardId: BoardName }) => {
         // song이 삭제된 경우 - 모든 이미지 삭제
         if (!modifiedSong && originalSong.images?.length) {
           originalSong.images.forEach((image) => {
-            deletePromises.push(deleteImage(image.objectName));
+            deletePromises.push(handleDelete(image.objectName));
           });
           return;
         }
@@ -197,24 +186,23 @@ export const PraisePage = ({ boardId }: { boardId: BoardName }) => {
             );
             if (!imageStillExists) {
               // 이미지가 삭제된 경우
-              deletePromises.push(deleteImage(originalImage.objectName));
+              deletePromises.push(handleDelete(originalImage.objectName));
             }
           });
         }
       });
 
-      // 새로운 이미지 업로드 처리
       filteredSong.forEach((modifiedSong) => {
         modifiedSong.images?.forEach((image) => {
-          if (image.file && image.uploadUrl) {
-            uploadPromises.push(uploadImage(image.uploadUrl, image.file));
+          if (image.file) {
+            uploadFile.push(image.file);
           }
         });
       });
 
       const transformedContent = {
         kind: newContent.kind,
-        description: modifiedContent.description,
+        description: newContent.description,
         songs: filteredSong.map((song) => ({
           id: song.id,
           title: song.title,
@@ -227,7 +215,10 @@ export const PraisePage = ({ boardId }: { boardId: BoardName }) => {
       };
 
       // 모든 업로드와 삭제 작업 실행
-      await Promise.allSettled([...uploadPromises, ...deletePromises]);
+      await Promise.allSettled([
+        handleMultipleUpload(uploadFile),
+        ...deletePromises,
+      ]);
 
       // 게시글 업데이트
       const editedPost = await updatePost(userInfo.pid, {
@@ -242,7 +233,9 @@ export const PraisePage = ({ boardId }: { boardId: BoardName }) => {
         prev.map((item) => (item.id === editedPost.id ? editedPost : item))
       );
 
-      setSelectedBoard({ ...selectedBoard, content: newContent } as Posts);
+      setSelectedBoard({ ...selectedBoard, content: newContent } as Posts<
+        typeof boardId
+      >);
       setBoardState("detail");
     } catch {
       toast({
@@ -255,29 +248,28 @@ export const PraisePage = ({ boardId }: { boardId: BoardName }) => {
     }
   };
 
-  const handleItemDetail = async (post: Posts) => {
+  const handleItemDetail = async (post: Posts<typeof boardId>) => {
     if (isProcessingRef.current) return;
     isProcessingRef.current = true;
     try {
-      const content = post.content as Praise;
+      const content = post.content;
 
       for (let i = 0; i < content.songs.length; i++) {
         const song = content.songs[i];
 
-        if (song.images?.length) {
-          // 모든 이미지에 대한 다운로드 URL을 병렬로 가져오기
-          const downloadUrlPromises = song.images.map((objectName) =>
-            getDownloadUrl(objectName)
-          );
-          const downloadUrls = await Promise.all(downloadUrlPromises);
+        if (song.images?.length && typeof song.images[0] === "string") {
+          // 이미지 다운
+          const objectNames = song.images.map((objectName) => objectName);
+          const items = await downloadMultipleFiles(objectNames);
 
-          const target = post.content as SongItemWithoutImages;
+          const target = post.content as IPraiseForm;
 
           // 새로운 Image 객체 배열 생성
-          target.songs[i].images = downloadUrls.map((preview, index) => ({
+          target.songs[i].images = items.map((item, index) => ({
             id: Math.random().toString(36).substring(4),
-            preview,
-            objectName: song.images![index],
+            preview: window.URL.createObjectURL(item),
+            objectName: objectNames[index],
+            file: undefined,
           }));
         }
       }
@@ -297,7 +289,7 @@ export const PraisePage = ({ boardId }: { boardId: BoardName }) => {
         return (
           <PraiseForm
             initialData={newContent}
-            onSubmit={(data: SongItemWithoutImages) => {
+            onSubmit={(data) => {
               setNewContent(data);
             }}
             userPID={userInfo!.pid}
@@ -307,7 +299,7 @@ export const PraisePage = ({ boardId }: { boardId: BoardName }) => {
         if (selectedBoard) {
           return (
             <PraiseForm
-              initialData={selectedBoard.content as SongItemWithoutImages}
+              initialData={selectedBoard.content as IPraiseForm}
               onSubmit={() => {}}
               userPID={userInfo!.pid}
               readonly
@@ -328,8 +320,7 @@ export const PraisePage = ({ boardId }: { boardId: BoardName }) => {
                   <div className="flex flex-col space-y-3">
                     <div className="flex items-center text-lg font-medium">
                       <span>
-                        {post.targetDate}{" "}
-                        {(post.content as SongItemWithoutImages).kind} 콘티
+                        {post.targetDate} {post.content.kind} 콘티
                       </span>
                     </div>
 
@@ -355,7 +346,7 @@ export const PraisePage = ({ boardId }: { boardId: BoardName }) => {
         <Label className="text-xl font-bold">
           {boardState === "detail" && selectedBoard?.targetDate}{" "}
           {boardState === "detail"
-            ? (selectedBoard?.content as Praise)?.kind
+            ? selectedBoard?.content?.kind
             : PostTextMatcher[boardId]}{" "}
           {createEditState[boardState]}
         </Label>

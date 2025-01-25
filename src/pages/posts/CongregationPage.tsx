@@ -1,4 +1,4 @@
-import { BoardName, Posts, PostTextMatcher } from "@/api-models/post";
+import { Posts, PostTextMatcher } from "@/api-models/post";
 import type { Congregation } from "@/api-models/sub";
 import { createPost, getPostList, updatePost } from "@/apis/posts/posts";
 import { CongregationForm } from "@/components/page/CongregationForm";
@@ -20,12 +20,14 @@ const initValue: Congregation = {
   online: 0,
 };
 
-export const CongregationPage = ({ boardId }: { boardId: BoardName }) => {
+export const CongregationPage = ({ boardId }: { boardId: "congregation" }) => {
   const [boardState, setBoardState] = useState<
     "list" | "detail" | "create" | "edit"
   >("list");
-  const [boardList, setBoardList] = useState<Posts[]>([]);
-  const [selectedBoard, setSelectedBoard] = useState<Posts | null>(null);
+  const [boardList, setBoardList] = useState<Posts<typeof boardId>[]>([]);
+  const [selectedBoard, setSelectedBoard] = useState<Posts<
+    typeof boardId
+  > | null>(null);
   const [selectedListDate, setSelectedListDate] = useState<Date>(new Date());
   const [newContent, setNewContent] = useState(initValue);
   const [selectedNewContentDate, setSelectedNewContentDate] =
@@ -98,7 +100,7 @@ export const CongregationPage = ({ boardId }: { boardId: BoardName }) => {
 
   const handleClickEdit = () => {};
 
-  const handleClickItem = (post: Posts) => {
+  const handleClickItem = (post: Posts<typeof boardId>) => {
     const newContent = deepCopy(post.content as Congregation);
     setSelectedBoard(post);
     setNewContent(newContent);

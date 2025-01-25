@@ -4,17 +4,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Liturgists } from "@/api-models/sub";
 
-const initValue: Liturgists = {
-  worship: "",
-  sermon: "",
-  praise: "",
-  specialSong: "",
-  subtitle: "",
-  video: "",
-  sound: "",
-  others: "",
-};
-
 interface LiturgyFormProps {
   initialData: Liturgists;
   onSubmit: (data: Liturgists) => void;
@@ -22,7 +11,7 @@ interface LiturgyFormProps {
 }
 
 export const LiturgistsForm: React.FC<LiturgyFormProps> = ({
-  initialData = initValue,
+  initialData,
   onSubmit,
 }) => {
   const [formData, setFormData] = useState<Liturgists>(initialData);

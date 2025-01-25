@@ -1,7 +1,10 @@
-import { BoardName, Posts, PostTextMatcher } from "@/api-models/post";
-import type { Newcomer } from "@/api-models/sub";
-import { getDownloadUrl } from "@/apis/minio/images";
-import { getPromotionPostList, updatePartOfPost } from "@/apis/posts/posts";
+import { Posts, PostTextMatcher } from "@/api-models/post";
+import { downloadSingleFile, handleDelete } from "@/apis/minio";
+import {
+  deletePost,
+  getPromotionPostList,
+  updatePartOfPost,
+} from "@/apis/posts/posts";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -19,13 +22,28 @@ import { useGlobalStore } from "@/stores/global.store";
 import { ChevronRight, ImageIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
-interface Newcomers extends Newcomer {
-  preview?: string;
-}
-
-interface Post extends Posts {
-  preview?: string;
-  content: Newcomer;
+interface Newcomers {
+  leader: string;
+  name?: string;
+  pear: number;
+  phone?: string;
+  job?: string;
+  newComer: boolean;
+  churchName?: string;
+  pastorVisited: boolean;
+  baptism: boolean;
+  registrationDate?: string;
+  registrationReason?: string;
+  promotionEnd: boolean;
+  notes?: string[];
+  absence?: string;
+  climbing?: string;
+  boardName: "newcomer" | "absenteeism" | "promotion";
+  image?: {
+    file?: File;
+    preview: string;
+    objectName: string;
+  };
 }
 
 const calculateRows = (text: string) => {
@@ -33,26 +51,37 @@ const calculateRows = (text: string) => {
   return (text.match(/\n/g) || []).length + 1;
 };
 
-export const PromotionPage = ({ boardId }: { boardId: BoardName }) => {
+export const PromotionPage = ({ boardId }: { boardId: "promotion" }) => {
   const [boardState, setBoardState] = useState<"list" | "detail">("list");
-  const [boardList, setBoardList] = useState<Posts[]>([]);
-  const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+  const [boardList, setBoardList] = useState<Posts<typeof boardId>[]>([]);
+  const [selectedPost, setSelectedPost] = useState<Posts<
+    typeof boardId
+  > | null>(null);
   const [done, setDone] = useState(false);
   const isProcessingRef = useRef(false);
 
   const { userInfo, getCanWriteByDescription } = useGlobalStore();
   const { toast } = useToast();
 
-  const handleClickDetail = async (post: unknown) => {
+  const handleClickDetail = async (post: Posts<typeof boardId>) => {
     if (isProcessingRef.current) return;
     isProcessingRef.current = true;
     try {
-      const objectName = ((post as Posts)?.content as Newcomer)?.objectName;
-      if (!(post as Newcomers).preview && objectName) {
-        const url = await getDownloadUrl(objectName);
-        (post as Newcomers).preview = url;
+      const objectName = post.content.objectName;
+
+      if (objectName) {
+        const temp = post.content as Partial<
+          Posts<typeof boardId>
+        > as Newcomers;
+        if (!temp.image) {
+          const item = await downloadSingleFile(objectName);
+          temp.image = {
+            preview: window.URL.createObjectURL(item!),
+            objectName: objectName,
+          };
+        }
       }
-      setSelectedPost(post as Post);
+      setSelectedPost(post);
       setBoardState("detail");
     } catch {
       toast({
@@ -90,7 +119,7 @@ export const PromotionPage = ({ boardId }: { boardId: BoardName }) => {
   };
 
   const handleComplete = async (
-    post: Posts,
+    post: Posts<typeof boardId>,
     event: React.MouseEvent<HTMLDivElement, MouseEvent>
   ) => {
     event.stopPropagation();
@@ -114,6 +143,31 @@ export const PromotionPage = ({ boardId }: { boardId: BoardName }) => {
     }
   };
 
+  const handleIncomplete = async (
+    post: Posts<typeof boardId>,
+    event: React.MouseEvent<HTMLDivElement, MouseEvent>
+  ) => {
+    event.stopPropagation();
+    if (!userInfo?.pid || isProcessingRef.current) return;
+    isProcessingRef.current = true;
+    try {
+      await updatePartOfPost(userInfo.pid, {
+        id: post.id,
+        boardName: "promotion",
+        content: { ...post.content, promotionEnd: false },
+      });
+      setBoardList((prev) => prev.filter((item) => item.id !== post.id));
+    } catch {
+      toast({
+        title: "등반 미완료 변경 실패",
+        variant: "destructive",
+        duration: 2000,
+      });
+    } finally {
+      isProcessingRef.current = false;
+    }
+  };
+
   const handleToList = () => {
     setBoardState("list");
   };
@@ -122,9 +176,34 @@ export const PromotionPage = ({ boardId }: { boardId: BoardName }) => {
     setDone(done);
   };
 
+  const requestDelete = async (
+    post: Posts<typeof boardId>,
+    event: React.MouseEvent<HTMLDivElement, MouseEvent>
+  ) => {
+    event.stopPropagation();
+    if (isProcessingRef.current) return;
+    isProcessingRef.current = true;
+    try {
+      const objectName = post.content?.objectName;
+      if (objectName) {
+        await handleDelete(objectName);
+      }
+      await deletePost(post.id);
+      setBoardList((prev) => prev.filter((item) => item.id !== post.id));
+    } catch {
+      toast({
+        title: "삭제 실패",
+        variant: "destructive",
+        duration: 2000,
+      });
+    } finally {
+      isProcessingRef.current = false;
+    }
+  };
+
   useEffect(() => {
     const fetchData = async () => {
-      const result = await getPromotionPostList(done);
+      const result = await getPromotionPostList<typeof boardId>(done);
       setBoardList(result);
     };
     fetchData();
@@ -144,9 +223,9 @@ export const PromotionPage = ({ boardId }: { boardId: BoardName }) => {
             <div className="mb-4">
               <Label className="mb-2 block">새신자 사진</Label>
               <div className="relative border-2 border-dashed rounded-lg h-64 flex items-center justify-center">
-                {selectedPost?.preview ? (
+                {(selectedPost?.content as Newcomers)?.image?.preview ? (
                   <img
-                    src={selectedPost.preview}
+                    src={(selectedPost?.content as Newcomers).image?.preview}
                     alt="Preview"
                     className="w-full h-full object-contain"
                   />
@@ -179,6 +258,7 @@ export const PromotionPage = ({ boardId }: { boardId: BoardName }) => {
                 placeholder="장결 이유를 입력하세요"
                 className="resize-none"
                 rows={calculateRows(selectedPost?.content?.climbing ?? "")}
+                readOnly
               />
             </div>
 
@@ -239,7 +319,7 @@ export const PromotionPage = ({ boardId }: { boardId: BoardName }) => {
         return (
           <div className="space-y-2.5">
             {boardList.map((post) => {
-              const content = post.content as Newcomer;
+              const content = post.content;
               return (
                 <Card
                   key={post.id}
@@ -252,7 +332,30 @@ export const PromotionPage = ({ boardId }: { boardId: BoardName }) => {
                         {post.title} {content.pear.toString().substring(2)}또래
                         (담당자: {content.leader})
                       </div>
-                      {canWrite && (
+                      {canWrite && content.promotionEnd ? (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="sm">
+                              관리
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent
+                            align="end"
+                            className=" min-w-20"
+                          >
+                            <DropdownMenuItem
+                              onClick={(event) => handleIncomplete(post, event)}
+                            >
+                              미완 처리
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={(event) => requestDelete(post, event)}
+                            >
+                              삭제 처리
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      ) : (
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="outline" size="sm">

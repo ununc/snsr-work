@@ -1,6 +1,10 @@
-import { BoardName, Posts, PostTextMatcher } from "@/api-models/post";
-import type { Liturgy } from "@/api-models/sub";
-import { deleteImage, getDownloadUrl, uploadImage } from "@/apis/minio/images";
+import { type Posts, PostTextMatcher } from "@/api-models/post";
+import type { ILiturgyForm, ManagedContent } from "@/api-models/sub";
+import {
+  downloadMultipleFiles,
+  handleDelete,
+  handleMultipleUpload,
+} from "@/apis/minio";
 import { createPost, getPostList, updatePost } from "@/apis/posts/posts";
 import { LiturgyForm } from "@/components/page/LiturgyForm";
 import { MonthController } from "@/components/post/MonthController";
@@ -13,21 +17,7 @@ import { deepCopy } from "@/util/deepCopy";
 import { Book, Clock } from "lucide-react";
 import { useRef, useState } from "react";
 
-interface LiturgyWithoutImages {
-  preach: string;
-  bibleVerses: string;
-  continuity: string;
-  hymn: string;
-  images?: {
-    id: string;
-    file?: File;
-    preview: string;
-    uploadUrl?: string;
-    objectName: string;
-  }[];
-}
-
-const initValue: LiturgyWithoutImages = {
+const initValue: ILiturgyForm = {
   preach: "",
   bibleVerses: "",
   continuity: "",
@@ -35,12 +25,14 @@ const initValue: LiturgyWithoutImages = {
   images: [],
 };
 
-export const LiturgyPage = ({ boardId }: { boardId: BoardName }) => {
+export const LiturgyPage = ({ boardId }: { boardId: "liturgy" }) => {
   const [boardState, setBoardState] = useState<
     "list" | "detail" | "create" | "edit"
   >("list");
-  const [boardList, setBoardList] = useState<Posts[]>([]);
-  const [selectedBoard, setSelectedBoard] = useState<Posts | null>(null);
+  const [boardList, setBoardList] = useState<Posts<typeof boardId>[]>([]);
+  const [selectedBoard, setSelectedBoard] = useState<Posts<
+    typeof boardId
+  > | null>(null);
   const [selectedListDate, setSelectedListDate] = useState<Date>(new Date());
   const [newContent, setNewContent] = useState(initValue);
   const [selectedNewContentDate, setSelectedNewContentDate] =
@@ -84,22 +76,23 @@ export const LiturgyPage = ({ boardId }: { boardId: BoardName }) => {
     if (!userInfo?.pid || isProcessingRef.current) return;
     isProcessingRef.current = true;
     try {
-      const uploadPromises: Promise<void>[] = [];
-      newContent.images?.forEach((image) => {
-        if (image.objectName && image.file) {
-          uploadPromises.push(
-            uploadImage(image.uploadUrl as string, image.file)
-          );
+      const objectNameList: string[] = [];
+      const FileList: File[] = [];
+
+      for (let i = 0; i < newContent.images.length; i++) {
+        const file = newContent.images[i]?.file;
+        if (file) {
+          objectNameList.push(newContent.images[i].objectName);
+          FileList.push(file);
         }
-      });
-      await Promise.all(uploadPromises);
+      }
+
       const transformedContent = {
         ...newContent,
-        images: newContent.images
-          ? newContent.images.map((img) => img.objectName).filter(Boolean)
-          : [],
+        images: objectNameList,
       };
 
+      await handleMultipleUpload(FileList);
       const createdPost = await createPost(userInfo.pid, {
         boardName: boardId,
         targetDate: selectedNewContentDate?.toLocaleDateString("fr-CA"),
@@ -129,7 +122,9 @@ export const LiturgyPage = ({ boardId }: { boardId: BoardName }) => {
 
   const handleClickEdit = () => {
     if (!selectedBoard?.targetDate) return;
-    const newContent = deepCopy(selectedBoard.content as LiturgyWithoutImages);
+    const newContent = deepCopy(
+      selectedBoard.content as Partial<ILiturgyForm> as ILiturgyForm
+    );
     setNewContent(newContent);
     setSelectedNewContentDate(new Date(selectedBoard.targetDate));
     setBoardState("edit");
@@ -139,39 +134,35 @@ export const LiturgyPage = ({ boardId }: { boardId: BoardName }) => {
     if (!userInfo?.pid || !selectedBoard || isProcessingRef.current) return;
     isProcessingRef.current = true;
     try {
-      const uploadPromises: Promise<void>[] = [];
+      const originalContent = selectedBoard.content
+        .images as Partial<ManagedContent> as ManagedContent[];
+
       const deletePromises: Promise<void>[] = [];
 
-      const originalContent = selectedBoard.content as LiturgyWithoutImages;
-      const modifiedContent = newContent;
-
-      // Handle image changes
-      const originalImages = originalContent.images || [];
-      const modifiedImages = modifiedContent.images || [];
-
-      originalImages.forEach((originalImage) => {
-        const imageStillExists = modifiedImages.some(
+      originalContent?.forEach((originalImage) => {
+        const imageStillExists = newContent.images.some(
           (modifiedImage) => modifiedImage.id === originalImage.id
         );
         if (!imageStillExists) {
-          deletePromises.push(deleteImage(originalImage.objectName));
+          deletePromises.push(handleDelete(originalImage.objectName));
         }
       });
 
-      modifiedImages.forEach((modifiedImage) => {
-        if (modifiedImage.file && modifiedImage.uploadUrl) {
-          uploadPromises.push(
-            uploadImage(modifiedImage.uploadUrl, modifiedImage.file)
-          );
-        }
-      });
+      const uploadFile = newContent.images
+        .map((image) => image.file)
+        .filter((item) => item) as File[];
+
       const transformedContent = {
-        ...modifiedContent,
-        images: modifiedImages.map((img) => img.objectName).filter(Boolean),
+        ...newContent,
+        images: newContent.images
+          .map((img) => img.objectName)
+          .filter((name) => name),
       };
 
-      await Promise.all([...uploadPromises, ...deletePromises]);
-
+      await Promise.allSettled([
+        handleMultipleUpload(uploadFile),
+        ...deletePromises,
+      ]);
       const editedPost = await updatePost(userInfo.pid, {
         ...selectedBoard,
         boardName: boardId,
@@ -183,7 +174,10 @@ export const LiturgyPage = ({ boardId }: { boardId: BoardName }) => {
         prev.map((item) => (item.id === editedPost.id ? editedPost : item))
       );
 
-      setSelectedBoard({ ...selectedBoard, content: newContent } as Posts);
+      setSelectedBoard({
+        ...selectedBoard,
+        content: newContent,
+      } as Partial<ILiturgyForm> as Posts<typeof boardId>);
       setBoardState("detail");
     } catch (error) {
       console.error("Edit failed:", error);
@@ -197,24 +191,23 @@ export const LiturgyPage = ({ boardId }: { boardId: BoardName }) => {
     }
   };
 
-  const handleItemDetail = async (post: Posts) => {
+  const handleItemDetail = async (post: Posts<typeof boardId>) => {
     if (isProcessingRef.current) return;
     isProcessingRef.current = true;
     try {
-      const content = post.content as Liturgy;
-      if (content?.images?.length) {
-        const downloadUrls = await Promise.all(
-          content.images.map((objectName) => getDownloadUrl(objectName))
-        );
+      const objectNameList = post.content.images;
 
-        (post.content as LiturgyWithoutImages).images = downloadUrls.map(
-          (preview, index) => ({
-            id: Math.random().toString(36).substring(4),
-            preview,
-            objectName: content.images![index],
-          })
-        );
+      if (objectNameList?.length && typeof objectNameList[0] === "string") {
+        const items = await downloadMultipleFiles(objectNameList);
+        const target = post.content as Partial<ILiturgyForm> as ILiturgyForm;
+        target.images = items.map((item, index) => ({
+          id: Math.random().toString(36).substring(4),
+          preview: window.URL.createObjectURL(item),
+          objectName: objectNameList[index],
+          file: undefined,
+        }));
       }
+
       setSelectedBoard(post);
       setBoardState("detail");
     } catch {
@@ -235,7 +228,7 @@ export const LiturgyPage = ({ boardId }: { boardId: BoardName }) => {
         return (
           <LiturgyForm
             initialData={newContent}
-            onSubmit={(data: LiturgyWithoutImages) => {
+            onSubmit={(data: ILiturgyForm) => {
               setNewContent(data);
             }}
             userPID={userInfo!.pid}
@@ -245,7 +238,9 @@ export const LiturgyPage = ({ boardId }: { boardId: BoardName }) => {
         if (selectedBoard) {
           return (
             <LiturgyForm
-              initialData={selectedBoard.content as LiturgyWithoutImages}
+              initialData={
+                selectedBoard.content as Partial<ILiturgyForm> as ILiturgyForm
+              }
               onSubmit={() => {}}
               userPID={userInfo!.pid}
               readonly
@@ -270,7 +265,7 @@ export const LiturgyPage = ({ boardId }: { boardId: BoardName }) => {
 
                     <div className="flex items-center pl-2 text-gray-600">
                       <Book className="w-4 h-4 mr-2" />
-                      <span>{(post.content as Liturgy).preach}</span>
+                      <span>{post.content.preach}</span>
                     </div>
 
                     <div className="flex justify-end items-center pt-2 border-t text-sm text-gray-500">

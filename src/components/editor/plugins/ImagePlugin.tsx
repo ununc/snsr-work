@@ -5,8 +5,9 @@ import { $insertNodes } from "lexical";
 import { $createImageNode } from "../nodes/ImageNode";
 import { useImageStore } from "../../../stores/tempImage.store";
 import { INSERT_IMAGE_COMMAND } from "../command";
-import { getPresignedUrl } from "@/apis/minio/images";
 import { useGlobalStore } from "@/stores/global.store";
+import imageCompression from "browser-image-compression";
+import { getObjectName } from "@/apis/minio";
 
 type InsertImagePayload = File;
 
@@ -29,22 +30,34 @@ export default function ImagePlugin(): null {
         // 비동기 작업을 별도로 실행
         (async () => {
           try {
-            const [{ url, objectName }] = await Promise.all([
-              getPresignedUrl(userInfo?.pid ?? "", file.name),
-            ]);
-            const objectUrl = fileToUrl(file);
+            const compressedFile = await imageCompression(file, {
+              maxSizeMB: 0.7,
+              maxWidthOrHeight: 1024,
+              initialQuality: 0.8,
+            });
+
+            const newName = getObjectName(userInfo!.pid as string, file.name);
+
+            const renamedFile = new File(
+              [compressedFile],
+              encodeURIComponent(newName),
+              {
+                type: compressedFile.type,
+              }
+            );
+
+            const preview = fileToUrl(renamedFile);
             // 비동기 작업이 완료된 후 에디터 업데이트
             editor.update(() => {
-              const imageNode = $createImageNode(objectUrl, file.name);
+              const imageNode = $createImageNode(preview, file.name);
               $insertNodes([imageNode]);
             });
 
             // 이미지 정보를 저장소에 추가
             addPendingImage({
-              objectName,
-              url,
-              file,
-              objectUrl,
+              file: renamedFile,
+              preview,
+              objectName: newName,
             });
           } catch (error) {
             console.error("Failed to process image:", error);

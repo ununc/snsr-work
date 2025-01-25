@@ -1,53 +1,55 @@
 import { apiClient } from "../baseUrl";
-import { CreatePost, Posts } from "@/api-models/post";
+import type { BoardName, CreatePost, Posts } from "@/api-models/post";
 
-export const createPost = async (
+export const createPost = async <T extends BoardName>(
   pid: string,
-  payload: CreatePost
-): Promise<Posts> => {
+  payload: CreatePost<T>
+): Promise<Posts<T>> => {
   const { data } = await apiClient.post(`space/${pid}`, payload);
   return data;
 };
 
-export const updatePost = async (
+export const updatePost = async <T extends BoardName>(
   pid: string,
-  payload: CreatePost
-): Promise<Posts> => {
+  payload: CreatePost<T>
+): Promise<Posts<T>> => {
   const { data } = await apiClient.patch(`space/${pid}`, payload);
   return data;
 };
 
-export const updatePartOfPost = async (
+export const updatePartOfPost = async <T extends BoardName>(
   pid: string,
   payload: { [key: string]: unknown }
-): Promise<Posts> => {
+): Promise<Posts<T>> => {
   const { data } = await apiClient.patch(`space/${pid}`, payload);
   return data;
 };
 
-export const getPostList = async (
-  boardName: string,
+export const getPostList = async <T extends BoardName>(
+  boardName: T,
   month: string
-): Promise<Posts[]> => {
+): Promise<Posts<T>[]> => {
   const { data } = await apiClient.get(`space/${boardName}/${month}`);
   return data;
 };
 
-export const getBoardAllPostList = async (
-  boardName: string
-): Promise<Posts[]> => {
+export const getBoardAllPostList = async <T extends BoardName>(
+  boardName: T
+): Promise<Posts<T>[]> => {
   const { data } = await apiClient.get(`space/${boardName}`);
   return data;
 };
 
-export const getPromotionPostList = async (
+export const getPromotionPostList = async <T extends BoardName>(
   done: boolean = false
-): Promise<Posts[]> => {
+): Promise<Posts<T>[]> => {
   const { data } = await apiClient.get(`space/promooffer/${done}`);
   return data;
 };
 
-export const getAdvertisementList = async (month: string): Promise<Posts[]> => {
+export const getAdvertisementList = async (
+  month: string
+): Promise<Posts<"advertisement">[]> => {
   const { data } = await apiClient.get(`space/advertisement/range/${month}`);
   return data;
 };

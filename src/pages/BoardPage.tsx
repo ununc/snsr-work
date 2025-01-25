@@ -5,14 +5,16 @@ import {
   editBoard,
   getBoard,
   getBoardsSplit,
-  getBoardTemplates,
   ResponseBoardDto,
 } from "@/apis/board/board";
-import { deleteImage, getDownloadUrl, uploadImage } from "@/apis/minio/images";
+import {
+  downloadMultipleFiles,
+  handleDelete,
+  handleMultipleUpload,
+} from "@/apis/minio";
 import { EditButton } from "@/components/EditButton";
 import { Editor } from "@/components/editor/Editor";
 import { PreviewEditor } from "@/components/editor/Preview";
-import { TemplateButton } from "@/components/TemplateButton";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -36,8 +38,6 @@ export const BoardPage = ({ boardId }: { boardId: BoardId }) => {
   const [isCreate, setIsCreate] = useState<boolean>(false);
   const [isEdit, setIsEdit] = useState<boolean>(false);
   const [list, setList] = useState<ResponseBoardDto[]>([]);
-  const [templateList, setTemplateList] = useState<ResponseBoardDto[]>([]);
-  const [manageTemplate, setManageTemplate] = useState<boolean>(false);
 
   const [objectNames, setObjectNames] = useState<{
     minioPath: string[];
@@ -58,7 +58,6 @@ export const BoardPage = ({ boardId }: { boardId: BoardId }) => {
 
   const [title, setTitle] = useState("");
   const [loading, setLoading] = useState(false);
-  const [isTemplate, setIsTemplate] = useState(false);
   const { text } = useChangedStringStore();
   const { pendingImages } = useImageStore();
   const { userInfo, getCanWriteByDescription } = useGlobalStore();
@@ -76,10 +75,6 @@ export const BoardPage = ({ boardId }: { boardId: BoardId }) => {
     setTitle(value);
   };
 
-  const handleTemplateClick = () => {
-    setIsTemplate((prev) => !prev);
-  };
-
   const objectNameList = (str: string) => {
     const pattern = /"src":"([^"]+)"/g;
     return [...str.matchAll(pattern)].map((match) => match[1]);
@@ -88,27 +83,27 @@ export const BoardPage = ({ boardId }: { boardId: BoardId }) => {
   const handleCreate = async () => {
     setLoading(true);
     try {
-      const uploadPromises = [];
+      const FileList: File[] = [];
       let currentText = text;
 
       for (const image of pendingImages) {
-        if (currentText.includes(image.objectUrl)) {
-          currentText = currentText.replace(image.objectUrl, image.objectName);
-          uploadPromises.push(uploadImage(image.url, image.file));
+        if (currentText.includes(image.preview)) {
+          currentText = currentText.replace(image.preview, image.objectName);
+          FileList.push(image.file as File);
         }
       }
 
-      await Promise.all(uploadPromises);
+      await handleMultipleUpload(FileList);
       await createBoard({
         title,
         content: currentText,
-        isTemplate,
+        isTemplate: false,
         boardId,
         authorId: userInfo?.pid ?? "",
         onlyAuthorCanModify: false,
       });
       resetList();
-      await Promise.all([fetchTemplateList(), fetchList()]);
+      await fetchList();
       handleCancel();
     } catch (error) {
       console.error(error);
@@ -137,48 +132,11 @@ export const BoardPage = ({ boardId }: { boardId: BoardId }) => {
     setIsCreate(false);
     setIsEdit(false);
     setTitle("");
-    setIsTemplate(false);
+
     setObjectNames({
       minioPath: [],
       tempDown: [],
     });
-  };
-
-  const applyTemplate = async (item: string) => {
-    const board = await getBoard(item);
-    const result = objectNameList(board.content);
-
-    const imageUrls: string[] = await Promise.all(
-      result.map((path) => getDownloadUrl(path))
-    );
-    setObjectNames({
-      minioPath: result,
-      tempDown: imageUrls,
-    });
-
-    for (let i = 0; i < result.length; i++) {
-      board.content = text.replace(result[i], imageUrls[i]);
-    }
-
-    if (isEdit) {
-      setSelectedBoard((prev) => {
-        if (prev) {
-          setInitText(prev.content);
-          return {
-            ...prev,
-            content: board.content,
-          };
-        }
-        return null;
-      });
-    } else {
-      setInitText(board.content);
-    }
-  };
-
-  const fetchTemplateList = async () => {
-    const data = await getBoardTemplates(boardId);
-    setTemplateList(data);
   };
 
   const fetchList = async () => {
@@ -203,16 +161,15 @@ export const BoardPage = ({ boardId }: { boardId: BoardId }) => {
     const board = await getBoard(id);
     const result = objectNameList(board.content);
 
-    const imageUrls: string[] = await Promise.all(
-      result.map((path) => getDownloadUrl(path))
-    );
+    const imageFiles = await downloadMultipleFiles(result);
+    const urls = imageFiles.map((file) => window.URL.createObjectURL(file));
     setObjectNames({
       minioPath: result,
-      tempDown: imageUrls,
+      tempDown: urls,
     });
 
     for (let i = 0; i < result.length; i++) {
-      board.content = board.content.replace(result[i], imageUrls[i]);
+      board.content = board.content.replace(result[i], urls[i]);
     }
     setSelectedBoard(board);
   };
@@ -220,7 +177,8 @@ export const BoardPage = ({ boardId }: { boardId: BoardId }) => {
   const handleUpdate = async () => {
     setLoading(true);
     try {
-      const uploadPromises = [];
+      const deletePromises: Promise<void>[] = [];
+      const FileList: File[] = [];
       let currentText = text;
 
       for (let i = 0; i < objectNames.tempDown.length; i++) {
@@ -230,30 +188,33 @@ export const BoardPage = ({ boardId }: { boardId: BoardId }) => {
             objectNames.minioPath[i]
           );
         } else {
-          uploadPromises.push(deleteImage(objectNames.minioPath[i]));
+          deletePromises.push(handleDelete(objectNames.minioPath[i]));
         }
       }
 
       for (const image of pendingImages) {
-        if (currentText.includes(image.objectUrl)) {
-          currentText = currentText.replace(image.objectUrl, image.objectName);
-          uploadPromises.push(uploadImage(image.url, image.file));
+        if (currentText.includes(image.preview)) {
+          currentText = currentText.replace(image.preview, image.objectName);
+          FileList.push(image.file as File);
         }
       }
 
       if (selectedBoard) {
-        await Promise.all(uploadPromises);
+        await Promise.allSettled([
+          handleMultipleUpload(FileList),
+          ...deletePromises,
+        ]);
         const data = await editBoard({
           ...selectedBoard,
           title,
           content: currentText,
-          isTemplate,
+          isTemplate: false,
           modifierId: userInfo?.pid ?? "",
         });
         setSelectedBoard(data);
       }
       resetList();
-      await Promise.all([fetchTemplateList(), fetchList()]);
+      await fetchList();
       handleCancel();
     } catch (error) {
       console.error(error);
@@ -268,9 +229,18 @@ export const BoardPage = ({ boardId }: { boardId: BoardId }) => {
   ) => {
     event.stopPropagation();
     try {
-      await deleteBoard(id, userInfo?.pid ?? "");
+      const board = await getBoard(id);
+      const result = objectNameList(board.content);
+
+      const deletePromises = result.map((objectName) =>
+        handleDelete(objectName)
+      );
+      await Promise.allSettled([
+        deleteBoard(id, userInfo?.pid ?? ""),
+        ...deletePromises,
+      ]);
       resetList();
-      await Promise.all([fetchTemplateList(), fetchList()]);
+      await fetchList();
     } catch (error) {
       console.error("Failed to delete board:", error);
     }
@@ -284,7 +254,6 @@ export const BoardPage = ({ boardId }: { boardId: BoardId }) => {
     setIsCreate(false);
     setIsEdit(false);
     resetList();
-    fetchTemplateList();
   }, [boardId]);
 
   useEffect(() => {
@@ -294,7 +263,6 @@ export const BoardPage = ({ boardId }: { boardId: BoardId }) => {
   useEffect(() => {
     if (isEdit && selectedBoard) {
       setTitle(selectedBoard.title);
-      setIsTemplate(selectedBoard.isTemplate);
     }
   }, [isEdit, selectedBoard]);
 
@@ -332,22 +300,9 @@ export const BoardPage = ({ boardId }: { boardId: BoardId }) => {
           </Label>
         </div>
 
-        <div className="flex justify-start items-end gap-4">
-          <div className="w-full">
-            <Label className="block mb-1">제목</Label>
-            <Input value={title} onChange={handleChange} />
-          </div>
-
-          <div>
-            <Label className="block mb-1">종류</Label>
-            <Button
-              className="shrink-0 w-16"
-              variant={isTemplate ? "default" : "outline"}
-              onClick={handleTemplateClick}
-            >
-              {isTemplate ? "템플릿" : "기본글"}
-            </Button>
-          </div>
+        <div className="w-full">
+          <Label className="block mb-1">제목</Label>
+          <Input value={title} onChange={handleChange} />
         </div>
 
         <Label className="block mt-2 mb-1">내용</Label>
@@ -357,10 +312,6 @@ export const BoardPage = ({ boardId }: { boardId: BoardId }) => {
         </div>
 
         <div className="flex justify-end gap-2 mt-4">
-          <TemplateButton
-            templates={templateList}
-            onSelectTemplate={applyTemplate}
-          />
           <Button
             disabled={loading}
             variant="destructive"
@@ -411,95 +362,51 @@ export const BoardPage = ({ boardId }: { boardId: BoardId }) => {
   return (
     <div className="page-wrapper">
       <div className="h-4 flex items-center mb-4">
-        <Label className="text-xl font-bold">
-          {manageTemplate ? "템플릿 관리" : pathTextMatcher[boardId]}
-        </Label>
+        <Label className="text-xl font-bold">{pathTextMatcher[boardId]}</Label>
       </div>
 
       <div className="page-body space-y-4">
-        {manageTemplate ? (
-          templateList.map((manual, index) => (
-            <Card
-              key={`${manual.id}${index}`}
-              className="hover:bg-gray-50 cursor-pointer p-4 flex justify-between"
-            >
-              <CardTitle className="text-lg">{manual.title}</CardTitle>
-              {userInfo?.pid === manual.authorId && (
-                <button
-                  onClick={(event) => deleteBoardResource(manual.id, event)}
-                  className="text-gray-400 hover:text-red-500 transition-colors"
-                >
-                  <Trash2 size={20} />
-                </button>
-              )}
-            </Card>
-          ))
-        ) : (
-          <>
-            {list.map((manual, index) => (
-              <Card
-                key={`${manual.id}${index}`}
-                onClick={() => handleCardClick(manual.id)}
-                className="hover:bg-gray-50 cursor-pointer"
-              >
-                <CardHeader className="p-4">
-                  <div className="flex justify-between items-center">
-                    <CardTitle className="text-lg">{manual.title}</CardTitle>
-                    {userInfo?.pid === manual.authorId && (
-                      <button
-                        onClick={(event) =>
-                          deleteBoardResource(manual.id, event)
-                        }
-                        className="text-gray-400 hover:text-red-500 transition-colors"
-                      >
-                        <Trash2 size={20} />
-                      </button>
-                    )}
-                  </div>
-                  <div className="w-full flex justify-end">
-                    <CardDescription className="text-sm text-gray-500">
-                      {new Date(manual.createdAt).toLocaleDateString()}{" "}
-                      {manual.authorName}
-                    </CardDescription>
-                  </div>
-                </CardHeader>
-              </Card>
-            ))}
+        {list.map((manual, index) => (
+          <Card
+            key={`${manual.id}${index}`}
+            onClick={() => handleCardClick(manual.id)}
+            className="hover:bg-gray-50 cursor-pointer"
+          >
+            <CardHeader className="p-4">
+              <div className="flex justify-between items-center">
+                <CardTitle className="text-lg">{manual.title}</CardTitle>
+                {userInfo?.pid === manual.authorId && (
+                  <button
+                    onClick={(event) => deleteBoardResource(manual.id, event)}
+                    className="text-red-500 transition-colors"
+                  >
+                    <Trash2 size={20} />
+                  </button>
+                )}
+              </div>
+              <div className="w-full flex justify-end">
+                <CardDescription className="text-sm text-gray-500">
+                  {new Date(manual.createdAt).toLocaleDateString()}{" "}
+                  {manual.authorName}
+                </CardDescription>
+              </div>
+            </CardHeader>
+          </Card>
+        ))}
 
-            {isLoading ? (
-              <div className="flex justify-center py-4">
-                <span>Loading...</span>
-              </div>
-            ) : list.length < total ? (
-              <div ref={observerTarget} className="h-20" />
-            ) : list.length > 0 ? (
-              <div className="text-center py-4 text-gray-500">
-                모든 데이터를 불러왔습니다
-              </div>
-            ) : null}
-          </>
-        )}
+        {isLoading ? (
+          <div className="flex justify-center py-4">
+            <span>Loading...</span>
+          </div>
+        ) : list.length < total ? (
+          <div ref={observerTarget} className="h-20" />
+        ) : list.length > 0 ? (
+          <div className="text-center py-4 text-gray-500">
+            모든 데이터를 불러왔습니다
+          </div>
+        ) : null}
       </div>
       <div className="flex justify-end items-center gap-4">
-        {manageTemplate ? (
-          <Button
-            variant="secondary"
-            onClick={() => {
-              setManageTemplate(false);
-            }}
-          >
-            게시물 보기
-          </Button>
-        ) : (
-          <Button
-            variant="secondary"
-            onClick={() => {
-              setManageTemplate(true);
-            }}
-          >
-            템플릿 관리
-          </Button>
-        )}
         {userInfo?.pid && writeRight && (
           <Button onClick={handleClickCreate}>작성하기</Button>
         )}
