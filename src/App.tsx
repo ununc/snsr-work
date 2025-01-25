@@ -4,6 +4,7 @@ import "@/App.css";
 import { useGlobalStore } from "./stores/global.store";
 import { useEffect, useState } from "react";
 import { Toaster } from "./components/ui/toaster";
+import { Loader } from "./components/ui/loader";
 
 export const App = () => {
   const [isHydrated, setIsHydrated] = useState(false);
@@ -28,6 +29,7 @@ export const App = () => {
           <PathController />
         </div>
         <Toaster />
+        <Loader />
       </div>
     </BrowserRouter>
   );

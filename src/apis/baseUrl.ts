@@ -1,4 +1,5 @@
 import { useGlobalStore } from "@/stores/global.store";
+import { useLoaderStore } from "@/stores/loader.store";
 import axios from "axios";
 
 export const baseUrl = "/api";
@@ -22,9 +23,16 @@ apiClient.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    useLoaderStore.getState().increaseCount();
+
     return config;
   },
   (error) => {
+    useLoaderStore.getState().decreaseCount();
     return Promise.reject(new Error(error));
   }
 );
+apiClient.interceptors.response.use((response) => {
+  useLoaderStore.getState().decreaseCount();
+  return response;
+});
