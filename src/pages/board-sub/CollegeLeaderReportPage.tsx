@@ -15,6 +15,7 @@ import { BogoSelect } from "@/components/BogoSelect";
 import { EditButton } from "@/components/EditButton";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
 import { useGlobalStore } from "@/stores/global.store";
 import { ChevronRight } from "lucide-react";
 
@@ -50,6 +51,8 @@ export const CollegeLeaderReportPage = ({
     const day = String(selectedDate.getDate()).padStart(2, "0");
     return `${year}-${month}-${day}`;
   }, [selectedDate]);
+
+  const { toast } = useToast();
   const isProcessingRef = useRef(false);
 
   // 선택된 날짜의 글 목록을 가져오는 함수
@@ -72,6 +75,70 @@ export const CollegeLeaderReportPage = ({
       console.error("요청 실패");
     } finally {
       isProcessingRef.current = false;
+    }
+  };
+
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = useState<number | null>(null);
+  const minSwipeDistance = 50;
+
+  // 현재 보고서의 인덱스를 찾는 함수
+  const getCurrentReportIndex = () => {
+    if (!attendances || !attendances.length || !lists.length) return -1;
+    return lists.findIndex(
+      (item) => item.leaderPid === attendances[0].leaderPid
+    );
+  };
+
+  // 이전/다음 보고서로 이동하는 함수
+  const navigateReport = async (direction: string) => {
+    const currentIndex = getCurrentReportIndex();
+    if (currentIndex === -1) return;
+
+    if (direction === "next" && currentIndex + 1 >= lists.length) {
+      toast({
+        title: "다음 게시물이 없습니다.",
+        variant: "destructive",
+        duration: 2000,
+      });
+      return;
+    }
+
+    if (direction === "prev" && currentIndex - 1 < 0) {
+      toast({
+        title: "이전 게시물이 없습니다.",
+        variant: "destructive",
+        duration: 2000,
+      });
+      return;
+    }
+
+    const nextIndex =
+      direction === "next" ? currentIndex + 1 : currentIndex - 1;
+    await handleClickReport(lists[nextIndex].leaderPid);
+  };
+
+  const onTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    setTouchEnd(null);
+    setTouchStart(e.touches[0].clientX);
+  };
+
+  const onTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    setTouchEnd(e.touches[0].clientX);
+  };
+
+  const onTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+
+    if (isLeftSwipe) {
+      navigateReport("next");
+    }
+    if (isRightSwipe) {
+      navigateReport("prev");
     }
   };
 
@@ -259,7 +326,12 @@ export const CollegeLeaderReportPage = ({
     if (attendances.length) {
       const { leaderName, leaderPid } = attendances[0];
       return (
-        <div className="page-wrapper">
+        <div
+          className="page-wrapper"
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEnd}
+        >
           <div className="h-9 flex justify-between items-center mb-4">
             <Label className="text-xl font-bold">
               {formattedDate} {leaderName} 사랑방
