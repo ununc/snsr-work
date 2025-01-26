@@ -3,13 +3,6 @@ import { Badge } from "@/components/ui/badge";
 import { useEffect, useState, useCallback } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Attendance } from "@/apis/leaderreport/report";
 
 interface AttendanceListProps {
@@ -31,15 +24,13 @@ const STATUS_DISPLAY = {
 const getStatusBadgeColor = (status: Attendance["status"]) => {
   switch (status) {
     case "ALL":
-      return "bg-green-500";
+      return "bg-green-600 active:bg-green-600";
     case "WORSHIP":
-      return "bg-blue-500";
+      return "bg-blue-600 active:bg-blue-600";
     case "CELL":
-      return "bg-yellow-500";
-    case "NO":
-      return "bg-red-500";
+      return "bg-yellow-600 active:bg-yellow-600";
     default:
-      return "bg-red-500";
+      return "bg-red-600 active:bg-red-600";
   }
 };
 
@@ -134,28 +125,24 @@ export const AttendanceList = ({
               <h3 className="text-lg font-semibold">{attendance.memberName}</h3>
               <div className="flex items-center gap-2">
                 {editable ? (
-                  <Select
-                    value={attendance.status}
-                    onValueChange={(value: Attendance["status"]) =>
-                      handleAttendanceChange(index, "status", value)
-                    }
-                  >
-                    <SelectTrigger className="w-32">
-                      <SelectValue
-                        placeholder={STATUS_DISPLAY[attendance.status]}
-                      />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="NO">{STATUS_DISPLAY.NO}</SelectItem>
-                      <SelectItem value="ALL">{STATUS_DISPLAY.ALL}</SelectItem>
-                      <SelectItem value="WORSHIP">
-                        {STATUS_DISPLAY.WORSHIP}
-                      </SelectItem>
-                      <SelectItem value="CELL">
-                        {STATUS_DISPLAY.CELL}
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
+                  Object.entries(STATUS_DISPLAY).map((status) => (
+                    <Badge
+                      key={status[0]}
+                      variant={
+                        attendance.status === status[0] ? "default" : "outline"
+                      }
+                      className={
+                        (attendance.status === status[0]
+                          ? getStatusBadgeColor(attendance.status)
+                          : "") + " cursor-pointer px-1 py-1"
+                      }
+                      onClick={() =>
+                        handleAttendanceChange(index, "status", status[0])
+                      }
+                    >
+                      {status[1]}
+                    </Badge>
+                  ))
                 ) : (
                   <Badge className={getStatusBadgeColor(attendance.status)}>
                     {STATUS_DISPLAY[attendance.status]}

@@ -3,11 +3,12 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { ImageIcon, TrashIcon } from "lucide-react";
+import { CopyIcon, ImageIcon, TrashIcon } from "lucide-react";
 import { ImageViewer } from "./ImageViewr";
 import type { ILiturgyForm } from "@/api-models/sub";
 import imageCompression from "browser-image-compression";
 import { getObjectName } from "@/apis/minio";
+import { useToast } from "@/hooks/use-toast";
 
 interface LiturgyFormProps {
   initialData: ILiturgyForm;
@@ -30,7 +31,7 @@ export const LiturgyForm: React.FC<LiturgyFormProps> = ({
   const [formData, setFormData] = useState(initialData);
   const [viewerOpen, setViewerOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
-
+  const { toast } = useToast();
   useEffect(() => {
     if (!readonly) {
       onSubmit(formData);
@@ -114,7 +115,28 @@ export const LiturgyForm: React.FC<LiturgyFormProps> = ({
   return (
     <div className="space-y-6 mb-6">
       <div className="mb-4">
-        <Label className="mb-2 block">말씀 제목</Label>
+        <div className="flex justify-between items-center mb-2">
+          <Label className="mb-2 block">말씀 제목</Label>{" "}
+          {readonly && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-6 px-2"
+              onClick={() => {
+                navigator.clipboard.writeText(formData.preach);
+                toast({
+                  title: "복사 완료",
+                  description: "말씀 제목이 복사되었습니다.",
+                  duration: 2000,
+                  className: "top-4 right-4 fixed w-54",
+                });
+              }}
+            >
+              <CopyIcon className="w-4 h-4" />
+            </Button>
+          )}
+        </div>
         <Input
           placeholder="사랑으로 세우는 공동체"
           value={formData.preach}
@@ -125,7 +147,28 @@ export const LiturgyForm: React.FC<LiturgyFormProps> = ({
       </div>
 
       <div className="mb-4">
-        <Label className="mb-2 block">말씀 구절</Label>
+        <div className="flex justify-between items-center mb-2">
+          <Label className="mb-2 block">말씀 구절</Label>
+          {readonly && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-6 px-2"
+              onClick={() => {
+                navigator.clipboard.writeText(formData.bibleVerses);
+                toast({
+                  title: "복사 완료",
+                  description: "말씀 구절이 복사되었습니다.",
+                  duration: 2000,
+                  className: "top-4 right-4 fixed w-54",
+                });
+              }}
+            >
+              <CopyIcon className="w-4 h-4" />
+            </Button>
+          )}
+        </div>
         <Input
           placeholder="마태복음 22장 34절~40절"
           value={formData.bibleVerses}
@@ -136,7 +179,28 @@ export const LiturgyForm: React.FC<LiturgyFormProps> = ({
       </div>
 
       <div className="mb-4">
-        <Label className="mb-2 block">설교 콘티</Label>
+        <div className="flex justify-between items-center mb-2">
+          <Label className="mb-2 block">설교 콘티</Label>
+          {readonly && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-6 px-2"
+              onClick={() => {
+                navigator.clipboard.writeText(formData.continuity);
+                toast({
+                  title: "복사 완료",
+                  description: "설교 콘티가 복사되었습니다.",
+                  duration: 2000,
+                  className: "top-4 right-4 fixed w-54",
+                });
+              }}
+            >
+              <CopyIcon className="w-4 h-4" />
+            </Button>
+          )}
+        </div>
         <Textarea
           placeholder="시편 96:5-6"
           value={formData.continuity}
@@ -148,7 +212,28 @@ export const LiturgyForm: React.FC<LiturgyFormProps> = ({
       </div>
 
       <div className="mb-4">
-        <Label className="mb-2 block">적용 찬양</Label>
+        <div className="flex justify-between items-center mb-2">
+          <Label className="mb-2 block">적용 찬양</Label>
+          {readonly && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-6 px-2"
+              onClick={() => {
+                navigator.clipboard.writeText(formData.hymn);
+                toast({
+                  title: "복사 완료",
+                  description: "적용 찬양이 복사되었습니다.",
+                  duration: 2000,
+                  className: "top-4 right-4 fixed w-54",
+                });
+              }}
+            >
+              <CopyIcon className="w-4 h-4" />
+            </Button>
+          )}
+        </div>
         <Input
           placeholder="하나님의 부르심"
           value={formData.hymn}

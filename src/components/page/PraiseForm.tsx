@@ -188,7 +188,7 @@ export const PraiseForm: React.FC<PraiseFormProps> = ({
               <Badge
                 key={kind}
                 variant={formData.kind === kind ? "default" : "outline"}
-                className="cursor-pointer hover:bg-primary/90"
+                className="cursor-pointer"
                 onClick={() => handleKindChange(kind)}
               >
                 {kind}
@@ -239,7 +239,7 @@ export const PraiseForm: React.FC<PraiseFormProps> = ({
                     navigator.clipboard.writeText(song.title);
                     toast({
                       title: "복사 완료",
-                      description: "제목이 클립보드에 복사되었습니다.",
+                      description: "제목이 복사되었습니다.",
                       duration: 2000,
                       className: "top-4 right-4 fixed w-54",
                     });
@@ -273,7 +273,7 @@ export const PraiseForm: React.FC<PraiseFormProps> = ({
                     navigator.clipboard.writeText(song.lyrics);
                     toast({
                       title: "복사 완료",
-                      description: "가사가 클립보드에 복사되었습니다.",
+                      description: "가사가 복사되었습니다.",
                       duration: 2000,
                       className: "top-4 right-4 fixed w-54",
                     });
@@ -308,7 +308,7 @@ export const PraiseForm: React.FC<PraiseFormProps> = ({
                     navigator.clipboard.writeText(song.link || "");
                     toast({
                       title: "복사 완료",
-                      description: "링크가 클립보드에 복사되었습니다.",
+                      description: "링크가 복사되었습니다.",
                       duration: 2000,
                       className: "top-4 right-4 fixed w-54",
                     });

@@ -149,7 +149,7 @@ export const AddressPage = () => {
       await navigator.clipboard.writeText(text);
       toast({
         title: "복사 완료",
-        description: `${type}가 클립보드에 복사되었습니다.`,
+        description: `${type}가 복사되었습니다.`,
         duration: 2000,
         className: "top-4 right-4 fixed w-54",
       });
