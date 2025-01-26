@@ -112,9 +112,8 @@ export const NewcomerForm: React.FC<NewcomersFormProps> = ({
 
     try {
       const compressedFile = await imageCompression(file, {
-        maxSizeMB: 0.4,
-        maxWidthOrHeight: 512,
-        initialQuality: 0.8,
+        maxSizeMB: 0.5,
+        initialQuality: 1,
       });
       const newName = getObjectName(userPID, file.name);
 

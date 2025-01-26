@@ -56,7 +56,7 @@ const parseDate = (dateStr: string): Date | undefined => {
 
 const calculateRows = (text: string) => {
   if (!text) return 1;
-  return (text.match(/\n/g) || []).length + 1;
+  return (text.match(/\n/g) || []).length + 3;
 };
 
 export const AdvertisementForm: React.FC<AdvertisementsFormProps> = ({
@@ -135,27 +135,22 @@ export const AdvertisementForm: React.FC<AdvertisementsFormProps> = ({
     try {
       const newContents = await Promise.all(
         Array.from(files).map(async (file) => {
+          console.log("a", file.size);
+
+          if (file.type.includes("image")) {
+            file = await imageCompression(file, {
+              maxSizeMB: 5,
+              initialQuality: 1,
+              useWebWorker: true,
+            });
+          }
+
+          console.log("b", file.size);
           const newName = getObjectName(userPID, file.name);
 
           const renamedFile = new File([file], encodeURIComponent(newName), {
             type: file.type,
           });
-
-          if (file.type.includes("image")) {
-            const compressedFile = await imageCompression(renamedFile, {
-              maxSizeMB: 3,
-              maxWidthOrHeight: 1920,
-              initialQuality: 0.8,
-            });
-
-            return {
-              id: Math.random().toString(36).substring(4),
-              file: compressedFile,
-              preview: URL.createObjectURL(file),
-              objectName: newName,
-              type: renamedFile.type,
-            };
-          }
 
           return {
             id: Math.random().toString(36).substring(4),
@@ -314,7 +309,7 @@ export const AdvertisementForm: React.FC<AdvertisementsFormProps> = ({
           placeholder="상세 내용을 입력하세요"
           value={formData.description}
           onChange={(e) => handleChange("description", e)}
-          rows={readonly ? calculateRows(formData.description) : 5}
+          rows={readonly ? calculateRows(formData.description) : 7}
           readOnly={readonly}
           className={readonly ? "bg-gray-50" : ""}
         />

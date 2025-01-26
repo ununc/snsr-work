@@ -31,9 +31,9 @@ export default function ImagePlugin(): null {
         (async () => {
           try {
             const compressedFile = await imageCompression(file, {
-              maxSizeMB: 0.7,
-              maxWidthOrHeight: 1024,
+              maxSizeMB: 1,
               initialQuality: 0.8,
+              useWebWorker: true,
             });
 
             const newName = getObjectName(userInfo!.pid as string, file.name);

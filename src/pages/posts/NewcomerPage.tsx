@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useGlobalStore } from "@/stores/global.store";
@@ -519,12 +520,10 @@ export const NewcomerPage = ({ boardId }: { boardId: "newcomer" }) => {
                   key={post.id}
                   className="w-full hover:shadow-md transition-shadow"
                 >
-                  <CardContent className="p-3">
+                  <CardContent className="p-3 space-y-2">
                     <div className="flex justify-between items-center">
                       <div className="font-semibold">
-                        {post.title} {content.pear.toString().substring(2)}또래
-                        &#40;
-                        {content.newComer ? "초신자" : "기신자"}&#41;{" "}
+                        {post.title} {content.pear.toString().substring(2)}또래{" "}
                         {content.notes?.length ?? 0}주차
                       </div>
                       {canWrite && (
@@ -564,10 +563,20 @@ export const NewcomerPage = ({ boardId }: { boardId: "newcomer" }) => {
                         </DropdownMenu>
                       )}
                     </div>
-                    <div className="flex justify-end items-center pt-2 text-sm text-gray-500">
-                      <Clock className="w-4 h-4 mr-1" />
-                      <div className="text-muted-foreground">
+                    <Separator />
+
+                    <div className="grid grid-cols-9 gap-3 text-muted-foreground text-sm">
+                      <div className="col-span-4 flex items-center">
+                        <Clock className="w-4 h-4 mr-1" />
                         {post.targetDate}
+                      </div>
+
+                      <div className="col-span-2">
+                        {content.newComer ? "초신자" : "기신자"}
+                      </div>
+
+                      <div className="col-span-3 flex items-center">
+                        목사님 심방 {content.pastorVisited ? "✓" : "✗"}
                       </div>
                     </div>
                   </CardContent>

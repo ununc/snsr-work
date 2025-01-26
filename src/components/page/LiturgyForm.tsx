@@ -64,9 +64,8 @@ export const LiturgyForm: React.FC<LiturgyFormProps> = ({
       const newImages = await Promise.all(
         Array.from(files).map(async (file) => {
           const compressedFile = await imageCompression(file, {
-            maxSizeMB: 0.7,
-            maxWidthOrHeight: 1024,
-            initialQuality: 0.8,
+            maxSizeMB: 1,
+            initialQuality: 1,
           });
 
           const newName = getObjectName(userPID, file.name);

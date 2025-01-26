@@ -291,9 +291,13 @@ export const AdvertisementPage = ({
                       </div>
                       <div className="flex justify-end items-center pt-2 border-t text-sm text-gray-500">
                         <Clock className="w-4 h-4 mr-1" />
-                        <span>
-                          적용 기간: {content.startDate} ~ {content.endDate}
-                        </span>
+                        {content.startDate === content.endDate ? (
+                          <span>적용 날짜 : {content.endDate}</span>
+                        ) : (
+                          <span>
+                            적용 기간 : {content.startDate} ~ {content.endDate}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </CardContent>

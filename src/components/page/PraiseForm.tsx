@@ -91,9 +91,9 @@ export const PraiseForm: React.FC<PraiseFormProps> = ({
       const newImages = await Promise.all(
         Array.from(files).map(async (file) => {
           const compressedFile = await imageCompression(file, {
-            maxSizeMB: 0.7,
-            maxWidthOrHeight: 1024,
-            initialQuality: 0.8,
+            maxSizeMB: 1,
+            initialQuality: 1,
+            useWebWorker: true,
           });
 
           const newName = getObjectName(userPID, file.name);
