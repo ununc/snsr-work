@@ -24,6 +24,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { extractFileName, getObjectName } from "@/apis/minio";
+import imageCompression from "browser-image-compression";
 
 interface AdvertisementsFormProps {
   initialData: IAdvertisementForm;
@@ -140,6 +141,22 @@ export const AdvertisementForm: React.FC<AdvertisementsFormProps> = ({
             type: file.type,
           });
 
+          if (file.type.includes("image")) {
+            const compressedFile = await imageCompression(renamedFile, {
+              maxSizeMB: 3,
+              maxWidthOrHeight: 1920,
+              initialQuality: 0.8,
+            });
+
+            return {
+              id: Math.random().toString(36).substring(4),
+              file: compressedFile,
+              preview: URL.createObjectURL(file),
+              objectName: newName,
+              type: renamedFile.type,
+            };
+          }
+
           return {
             id: Math.random().toString(36).substring(4),
             file: renamedFile,
@@ -160,6 +177,10 @@ export const AdvertisementForm: React.FC<AdvertisementsFormProps> = ({
   };
 
   const removeContent = (contentId: string) => {
+    const input = document.getElementById("content-upload") as HTMLInputElement;
+    if (input) {
+      input.value = ""; // Reset the input
+    }
     if (readonly) return;
     setFormData((prev) => ({
       ...prev,
@@ -196,7 +217,7 @@ export const AdvertisementForm: React.FC<AdvertisementsFormProps> = ({
       );
     } else if (type.includes("video")) {
       return (
-        <div className="w-full pl-3 pr-8 h-24 flex items-center justify-center bg-gray-100">
+        <div className="w-full pl-3 pr-8 h-24 flex items-center justify-start bg-gray-100">
           <VideoIcon className="w-6 h-6" />
           <span className="ml-2">
             {extractFileName(decodeURIComponent(content.objectName))}
@@ -206,7 +227,7 @@ export const AdvertisementForm: React.FC<AdvertisementsFormProps> = ({
     } // PDF 파일
     else if (type.includes("pdf")) {
       return (
-        <div className="w-full pl-3 pr-8 h-24 flex items-center justify-center bg-gray-100">
+        <div className="w-full pl-3 pr-8 h-24 flex items-center justify-start bg-gray-100">
           <FileCheck2 className="w-6 h-6" />
           <span className="ml-2">
             {extractFileName(decodeURIComponent(content.objectName))}
@@ -218,7 +239,7 @@ export const AdvertisementForm: React.FC<AdvertisementsFormProps> = ({
     // 오디오 파일
     else if (type.includes("audio")) {
       return (
-        <div className="w-full pl-3 pr-8 h-24 flex items-center justify-center bg-gray-100">
+        <div className="w-full pl-3 pr-8 h-24 flex items-center justify-start bg-gray-100">
           <MusicIcon className="w-6 h-6" />
           <span className="ml-2">
             {extractFileName(decodeURIComponent(content.objectName))}
@@ -230,7 +251,7 @@ export const AdvertisementForm: React.FC<AdvertisementsFormProps> = ({
     // 워드 문서
     else if (type.includes("msword") || type.includes("wordprocessingml")) {
       return (
-        <div className="w-full pl-3 pr-8 h-24 flex items-center justify-center bg-gray-100">
+        <div className="w-full pl-3 pr-8 h-24 flex items-center justify-start bg-gray-100">
           <Tablet className="w-6 h-6" />
           <span className="ml-2">
             {extractFileName(decodeURIComponent(content.objectName))}
@@ -242,7 +263,7 @@ export const AdvertisementForm: React.FC<AdvertisementsFormProps> = ({
     // 엑셀 문서
     else if (type.includes("ms-excel") || type.includes("spreadsheetml")) {
       return (
-        <div className="w-full pl-3 pr-8 h-24 flex items-center justify-center bg-gray-100">
+        <div className="w-full pl-3 pr-8 h-24 flex items-center justify-start bg-gray-100">
           <FileSpreadsheetIcon className="w-6 h-6" />
           <span className="ml-2">
             {extractFileName(decodeURIComponent(content.objectName))}
@@ -257,7 +278,7 @@ export const AdvertisementForm: React.FC<AdvertisementsFormProps> = ({
       type.includes("presentationml")
     ) {
       return (
-        <div className="w-full pl-3 pr-8 h-24 flex items-center justify-center bg-gray-100">
+        <div className="w-full pl-3 pr-8 h-24 flex items-center justify-start bg-gray-100">
           <PanelLeftDashed className="w-6 h-6" />
           <span className="ml-2">
             {extractFileName(decodeURIComponent(content.objectName))}
@@ -265,7 +286,7 @@ export const AdvertisementForm: React.FC<AdvertisementsFormProps> = ({
         </div>
       );
     } else {
-      <div className="w-full h-28 flex items-center justify-center bg-gray-100">
+      <div className="w-full h-28 flex items-center justify-start bg-gray-100">
         <FileIcon className="w-4 h-4" />;
         <span className="ml-2">
           {extractFileName(decodeURIComponent(content.objectName))}
@@ -410,7 +431,7 @@ export const AdvertisementForm: React.FC<AdvertisementsFormProps> = ({
             type="file"
             className="hidden"
             multiple
-            accept="image/*,video/*,application/*"
+            accept="image/*,video/*,audio/*,application/*"
             onChange={handleContentChange}
           />
         </div>
