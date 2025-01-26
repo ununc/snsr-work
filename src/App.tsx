@@ -22,7 +22,7 @@ export const App = () => {
   return (
     <BrowserRouter>
       <div className="w-full h-full mx-auto max-w-md flex flex-col">
-        <div className="absolute top-3 right-3 text-xs">v0.2.1</div>
+        <div className="absolute top-3 right-3 text-xs">v0.2.2</div>
 
         <div className="w-full h-safe-top" />
         <div className="flex-1">

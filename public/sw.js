@@ -290,13 +290,22 @@ self.addEventListener("notificationclick", function (event) {
   event.notification.close();
 
   // 알림 클릭시 해당 URL로 이동
-  if (event.notification.data) {
-    event.waitUntil(clients.openWindow(event.notification.data));
-  }
-  // data.url이 있는 경우 해당 페이지로 이동
-  // if (event.notification.data?.url) {
-  //   event.waitUntil(clients.openWindow(event.notification.data.url));
+  // if (event.notification.data) {
+  //   event.waitUntil(clients.openWindow(event.notification.data));
   // }
+  // data.url이 있는 경우 해당 페이지로 이동
+
+  //   {
+  //     "title": "특별 할인 이벤트",
+  //     "body": "오늘 단 하루! 전 상품 30% 할인 행사 중입니다. 지금 바로 확인하세요.",
+
+  //     "data": {
+  //     "url": "/address"
+  //   }
+  // }
+  if (event.notification.data?.url) {
+    event.waitUntil(clients.openWindow(event.notification.data.url));
+  }
 });
 /*
 발생 시점:
