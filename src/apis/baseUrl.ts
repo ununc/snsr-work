@@ -29,7 +29,7 @@ apiClient.interceptors.request.use(
   },
   (error) => {
     useLoaderStore.getState().decreaseCount();
-    return Promise.reject(new Error(error));
+    return Promise.reject(error);
   }
 );
 apiClient.interceptors.response.use(
@@ -39,6 +39,6 @@ apiClient.interceptors.response.use(
   },
   (error) => {
     useLoaderStore.getState().decreaseCount();
-    return Promise.reject(new Error(error));
+    return Promise.reject(error);
   }
 );
