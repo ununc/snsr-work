@@ -35,8 +35,12 @@ export const signup = async (info: SignUpForm) => {
 };
 
 export const autoLogin = async (): Promise<boolean> => {
-  const { data } = await apiClient.get("auth/validate");
-  return data.isValid;
+  try {
+    const { data } = await apiClient.get("auth/validate");
+    return data.isValid;
+  } catch {
+    return false;
+  }
 };
 
 export const getNewRoleMenu = async (pid: string) => {
