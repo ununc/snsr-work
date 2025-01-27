@@ -32,7 +32,13 @@ apiClient.interceptors.request.use(
     return Promise.reject(new Error(error));
   }
 );
-apiClient.interceptors.response.use((response) => {
-  useLoaderStore.getState().decreaseCount();
-  return response;
-});
+apiClient.interceptors.response.use(
+  (response) => {
+    useLoaderStore.getState().decreaseCount();
+    return response;
+  },
+  (error) => {
+    useLoaderStore.getState().decreaseCount();
+    return Promise.reject(new Error(error));
+  }
+);

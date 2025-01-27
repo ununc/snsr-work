@@ -304,7 +304,20 @@ self.addEventListener("notificationclick", function (event) {
   //   }
   // }
   if (event.notification.data?.url) {
-    event.waitUntil(clients.openWindow(event.notification.data.url));
+    event.waitUntil(
+      self.clients.openWindow("/").then(() => {
+        setTimeout(() => {
+          self.clients.matchAll().then((clientList) => {
+            clientList.forEach((client) => {
+              client.postMessage({
+                type: "PUSH_NAVIGATION",
+                url: event.notification.data.url,
+              });
+            });
+          });
+        }, 1000);
+      })
+    );
   }
 });
 /*
