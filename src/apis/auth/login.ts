@@ -18,11 +18,11 @@ interface SignUpForm {
   id: string;
   password: string;
   name: string;
-  email: string | null;
   phone: string;
   birth: string;
   sarang: string;
   daechung: boolean;
+  gender: boolean;
 }
 
 export const signup = async (info: SignUpForm) => {

@@ -2,6 +2,10 @@ import { useState, ChangeEvent, FormEvent } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Credentials, login } from "../apis/auth/login";
 import { useGlobalStore } from "@/stores/global.store";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { SquareCheck, SquareDashed } from "lucide-react";
 
 export const LoginPage = () => {
   const [credentials, setCredentials] = useState<Credentials>({
@@ -39,32 +43,30 @@ export const LoginPage = () => {
       <form onSubmit={handleSubmit} className="mt-8 space-y-6">
         <div className="space-y-4">
           <div>
-            <label htmlFor="id" className="block text-sm font-medium">
+            <Label htmlFor="id" className="block mb-2">
               아이디
-            </label>
-            <input
+            </Label>
+            <Input
               id="id"
               name="id"
               type="text"
               required
               value={credentials.id}
               onChange={handleChange}
-              className="mt-1 block w-full rounded-md border border-gray-300 p-2"
             />
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-sm font-medium">
+            <Label htmlFor="password" className="block mb-2">
               비밀번호
-            </label>
-            <input
+            </Label>
+            <Input
               id="password"
               name="password"
               type="password"
               required
               value={credentials.password}
               onChange={handleChange}
-              className="mt-1 block w-full rounded-md border border-gray-300 p-2"
             />
           </div>
 
@@ -75,30 +77,30 @@ export const LoginPage = () => {
               type="checkbox"
               checked={autoLogin}
               onChange={(e) => setAutoLogin(e.target.checked)}
-              className="h-4 w-4 text-blue-600 rounded border-gray-300"
+              className="h-0 w-0"
             />
-            <label
+
+            <Label
               htmlFor="autoLogin"
-              className="ml-2 block text-sm text-gray-900"
+              className="flex gap-1.5 items-center text-sm"
             >
-              자동 로그인
-            </label>
+              {autoLogin ? (
+                <SquareCheck className="w-5 h-5" />
+              ) : (
+                <SquareDashed className="w-5 h-5" />
+              )}
+              로그인 유지
+            </Label>
           </div>
         </div>
 
-        <button
-          type="submit"
-          className="w-full rounded-md bg-blue-600 py-2 text-white hover:bg-blue-700"
-        >
+        <Button type="submit" className="w-full">
           로그인
-        </button>
+        </Button>
       </form>
 
       <div className="text-center mt-4 mb-28">
-        <Link
-          to="/account/signin"
-          className="text-sm text-blue-600 hover:text-blue-800"
-        >
+        <Link to="/account/signin" className="text-sm text-primary">
           회원가입
         </Link>
       </div>

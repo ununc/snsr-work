@@ -3,12 +3,12 @@ interface UserInfo {
   name: string;
   email?: string;
   phone: string;
-  birth: Date;
+  birth: string;
   sarang: string;
   daechung: boolean;
   created_at: Date;
   role_list: { name: string; id: string }[];
-
+  profile_image?: string;
   autoLogin: boolean;
 }
 

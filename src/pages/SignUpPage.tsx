@@ -2,32 +2,34 @@ import { useState, ChangeEvent, FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { signup } from "../apis/auth/login";
 import { members } from "@/etc/sarangbang";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 
-interface SignUpForm {
-  id: string;
-  password: string;
-  name: string;
-  email: string | null;
-  phone: string;
-  birth: string;
-  sarang: string;
-  daechung: string;
-}
+import { MonthDayPicker } from "@/components/SignInBirth";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useToast } from "@/hooks/use-toast";
 
 export const SignUpPage = () => {
-  const [formData, setFormData] = useState<SignUpForm>({
+  const [formData, setFormData] = useState({
     id: "",
     password: "",
     name: "",
-    email: "",
-    phone: "",
-    birth: "",
+    phone: "010",
+    year: "",
+    monthDay: "",
     sarang: "",
-    daechung: "대학부",
+    daechung: true,
+    gender: true,
   });
   const [passwordError, setPasswordError] = useState<string>("");
   const navigate = useNavigate();
-
+  const { toast } = useToast();
   const handleChange = (
     e: ChangeEvent<HTMLInputElement> | ChangeEvent<HTMLSelectElement>
   ) => {
@@ -39,7 +41,7 @@ export const SignUpPage = () => {
 
     // 비밀번호 입력 시 유효성 검사
     if (name === "password") {
-      if (value.length < 6) {
+      if (value.length && value.length < 6) {
         setPasswordError("비밀번호는 6자리 이상이어야 합니다.");
       } else {
         setPasswordError("");
@@ -47,23 +49,116 @@ export const SignUpPage = () => {
     }
   };
 
+  const handleBirth = ({
+    month,
+    day,
+  }: {
+    month: number | null;
+    day: number | null;
+  }) => {
+    if (month === null || day === null) {
+      setFormData((prev) => ({ ...prev, monthDay: "" }));
+      return;
+    }
+    const formattedMonth = month.toString().padStart(2, "0");
+    const formattedDay = day.toString().padStart(2, "0");
+
+    const monthDay = `${formattedMonth}-${formattedDay}`;
+    setFormData((prev) => ({ ...prev, monthDay }));
+  };
+
+  const handleGender = () => {
+    setFormData((prevState) => ({ ...prevState, gender: !prevState.gender }));
+  };
+
+  const handleYearChange = (yearValue: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      year: yearValue,
+    }));
+  };
+
+  const handleSarangChange = (name: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      sarang: name,
+    }));
+  };
+
+  const handleClickOrg = (org: boolean) => {
+    if (formData.daechung === org) return;
+    setFormData((prev) => ({
+      ...prev,
+      daechung: org,
+      sarang: "",
+    }));
+  };
+
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: 48 }, (_, i) => currentYear - i - 17);
+
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-
+    const {
+      id,
+      password,
+      name,
+      phone,
+      year,
+      monthDay,
+      sarang,
+      daechung,
+      gender,
+    } = formData;
     // 회원가입 전 비밀번호 길이 검증
-    if (formData.password.length < 6) {
-      alert("비밀번호는 6자리 이상이어야 합니다.");
+    if (password.length < 6) {
+      toast({
+        title: "비밀번호는 6자리 이상이어야 합니다.",
+        variant: "destructive",
+        duration: 2000,
+      });
       return;
     }
 
+    if (!year) {
+      toast({
+        title: "또래를 선택해 주세요",
+        variant: "destructive",
+        duration: 2000,
+      });
+      return;
+    }
+
+    if (!monthDay) {
+      toast({
+        title: "생일을 선택해 주세요",
+        variant: "destructive",
+        duration: 2000,
+      });
+      return;
+    }
+
+    if (!sarang) {
+      toast({
+        title: "사랑방을 선택해 주세요",
+        variant: "destructive",
+        duration: 2000,
+      });
+      return;
+    }
+
+    const payload = {
+      id,
+      password,
+      name,
+      phone,
+      birth: `${year}-${monthDay}`,
+      sarang,
+      daechung,
+      gender,
+    };
+
     try {
-      const payload = {
-        ...formData,
-        daechung: formData.daechung === "대학부",
-      };
-      if (!payload.email) {
-        payload.email = null;
-      }
       await signup(payload);
       navigate("/account/login");
       alert("회원가입 완료\n로그인으로 이동합니다.");
@@ -74,149 +169,175 @@ export const SignUpPage = () => {
 
   return (
     <div className="w-full p-8 h-full flex flex-col justify-center">
-      <form onSubmit={handleSubmit} className="mt-8 space-y-6">
-        <div className="space-y-4">
+      <form onSubmit={handleSubmit} className="mt-4 space-y-8">
+        <div className="space-y-3">
           <div>
-            <label htmlFor="id" className="block text-sm font-medium">
+            <Label htmlFor="id" className="block mb-2">
               아이디
-            </label>
-            <input
+            </Label>
+            <Input
               id="id"
               name="id"
               type="text"
               required
               value={formData.id}
               onChange={handleChange}
-              className="mt-1 block w-full rounded-md border border-gray-300 p-2"
             />
           </div>
-
           <div>
-            <label htmlFor="password" className="block text-sm font-medium">
+            <Label htmlFor="password" className="block mb-2">
               비밀번호
-            </label>
-            <input
+            </Label>
+            <Input
               id="password"
               name="password"
               type="password"
               required
               value={formData.password}
               onChange={handleChange}
-              className="mt-1 block w-full rounded-md border border-gray-300 p-2"
             />
             {passwordError && (
               <p className="mt-1 text-sm text-red-600">{passwordError}</p>
             )}
           </div>
-          <div className="flex gap-3">
-            <div>
-              <label htmlFor="name" className="block text-sm font-medium">
+          <div className="grid grid-cols-5 gap-3">
+            <div className="col-span-2">
+              <Label htmlFor="name" className="block mb-2">
                 이름
-              </label>
-              <input
+              </Label>
+              <Input
                 id="name"
                 name="name"
                 type="text"
                 required
                 value={formData.name}
                 onChange={handleChange}
-                className="mt-1 block w-full rounded-md border border-gray-300 p-2"
               />
             </div>
-            <div>
-              <label htmlFor="phone" className="block text-sm font-medium">
+            <div className="col-span-3">
+              <Label htmlFor="phone" className="block mb-2">
                 전화번호
-              </label>
-              <input
+              </Label>
+              <Input
                 id="phone"
                 name="phone"
                 type="tel"
                 required
                 value={formData.phone}
                 onChange={handleChange}
-                className="mt-1 block w-full rounded-md border border-gray-300 p-2"
               />
             </div>
           </div>
-
-          <div className="w-full">
-            <label htmlFor="birth" className="block text-sm font-medium">
-              생년월일
-            </label>
-            <input
-              id="birth"
-              name="birth"
-              type="date"
-              required
-              value={formData.birth}
-              onChange={handleChange}
-              className="mt-1 block w-full rounded-md border border-gray-300 p-2"
-            />
-          </div>
-          <div className="flex justify-between items-center gap-4">
-            <div className="w-1/2 space-x-4">
-              <label className="inline-flex items-center">
-                <input
-                  type="radio"
-                  name="daechung"
-                  value="대학부"
-                  checked={formData.daechung === "대학부"}
-                  onChange={handleChange}
-                  className="mr-2"
-                />
-                <span>대학부</span>
-              </label>
-              <label className="inline-flex items-center">
-                <input
-                  type="radio"
-                  name="daechung"
-                  value="청년부"
-                  checked={formData.daechung === "청년부"}
-                  onChange={handleChange}
-                  className="mr-2"
-                />
-                <span>청년부</span>
-              </label>
-            </div>
-            <div className="w-1/2">
-              <select
-                id="sarang"
-                name="sarang"
-                required
-                value={formData.sarang}
-                onChange={handleChange}
-                className="mt-1 block w-full h-11 rounded-md border border-gray-300 p-2"
+          <div className="grid grid-cols-12 gap-3">
+            <div className="col-span-3">
+              <Label htmlFor="phone" className="block mb-2">
+                성별
+              </Label>
+              <Button
+                type="button"
+                onClick={handleGender}
+                variant="outline"
+                className="w-full"
               >
-                <option value="">사랑방을 선택하세요</option>
-                {formData.daechung === "청년부"
-                  ? members.y.map((name) => (
-                      <option key={name} value={name}>
-                        {name} 사랑방
-                      </option>
-                    ))
-                  : members.c.map((name) => (
-                      <option key={name} value={name}>
-                        {name} 사랑방
-                      </option>
-                    ))}
-              </select>
+                {formData.gender ? "남" : "여"}
+              </Button>
+            </div>
+            <div className="col-span-4">
+              <Label htmlFor="phone" className="block mb-2">
+                또래
+              </Label>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="w-full" type="button">
+                    {formData.year ? formData.year : "또래 선택"}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="max-h-36 min-w-24 overflow-y-scroll">
+                  {years.map((year) => (
+                    <DropdownMenuItem
+                      key={year}
+                      onSelect={() => handleYearChange(year.toString())}
+                    >
+                      <div className="text-center w-full">{year}</div>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+            <div className="col-span-5">
+              <Label htmlFor="phone" className="block mb-2">
+                생일
+              </Label>
+              <MonthDayPicker onChange={handleBirth} />
+            </div>
+          </div>
+
+          <div className="flex justify-between items-center gap-3">
+            <div className="">
+              <Label htmlFor="phone" className="block mb-2">
+                소속
+              </Label>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant={formData.daechung ? "default" : "outline"}
+                  className="w-full px-3"
+                  onClick={() => handleClickOrg(true)}
+                >
+                  대학부
+                </Button>
+                <Button
+                  type="button"
+                  variant={formData.daechung ? "outline" : "default"}
+                  className="w-full px-3"
+                  onClick={() => handleClickOrg(false)}
+                >
+                  청년부
+                </Button>
+              </div>
+            </div>
+
+            <div className="w-full">
+              <Label htmlFor="phone" className="block mb-2">
+                사랑방
+              </Label>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button type="button" variant="outline" className="w-full">
+                    {formData.sarang ? formData.sarang : "사랑방 선택"}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="max-h-36 min-w-36 overflow-y-scroll">
+                  {formData.daechung
+                    ? members.c.map((name) => (
+                        <DropdownMenuItem
+                          key={name}
+                          onSelect={() => handleSarangChange(name)}
+                        >
+                          <div className="text-center w-full">{name}</div>
+                        </DropdownMenuItem>
+                      ))
+                    : members.y.map((name) => (
+                        <DropdownMenuItem
+                          key={name}
+                          onSelect={() => handleSarangChange(name)}
+                        >
+                          <div className="text-center w-full">{name}</div>
+                        </DropdownMenuItem>
+                      ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </div>
 
-        <button
-          type="submit"
-          className="w-full rounded-md bg-blue-600 py-2 text-white hover:bg-blue-700"
-        >
+        <Button type="submit" className="w-full">
           회원가입
-        </button>
+        </Button>
       </form>
 
-      <div className="text-center mt-4 mb-20">
-        <Link
-          to="/account/login"
-          className="text-sm text-blue-600 hover:text-blue-800"
-        >
+      <div className="text-center mt-4 mb-16">
+        <Link to="/account/login" className="text-sm text-primary">
           로그인
         </Link>
       </div>

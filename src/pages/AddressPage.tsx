@@ -5,7 +5,7 @@ import {
   updateRequestUserInfo,
 } from "@/apis/auth/login";
 import { Label } from "@/components/ui/label";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Card,
   CardContent,
@@ -16,14 +16,13 @@ import {
 import { Badge } from "@/components/ui/badge";
 import {
   Phone,
-  UserCircle,
   Mail,
   ChevronRight,
   Pencil,
   RefreshCw,
   Download,
-  Calendar,
   BellRing,
+  Image,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useGlobalStore } from "@/stores/global.store";
@@ -37,8 +36,17 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { members } from "@/etc/sarangbang";
 import { sendSubscription } from "@/apis/push/subscribe";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { AvatarImage } from "@radix-ui/react-avatar";
+import { compressUntilSize } from "@/util/compress";
+import { MonthDayPicker } from "@/components/SignInBirth";
 
 interface Contact {
   role: string;
@@ -47,6 +55,7 @@ interface Contact {
     phone: string;
     email: string;
     daechung: boolean;
+    profile_image: string;
   }[];
 }
 
@@ -63,6 +72,8 @@ const targetGroupNames = [
   "총괄국회계",
 ];
 
+const strictEmailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+
 const urlBase64ToUint8Array = (base64String: string): Uint8Array => {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
@@ -71,21 +82,19 @@ const urlBase64ToUint8Array = (base64String: string): Uint8Array => {
 };
 
 export const AddressPage = () => {
+  const [accordion, setAccordion] = useState("");
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [myPage, setMyPage] = useState(false);
   const [isEdit, setIsEdit] = useState(false);
 
-  const [editInfo, setEditInfo] = useState({
-    email: "",
-    phone: "",
-    birth: new Date(),
-    sarang: "",
-    daechung: "대학부",
-  });
+  const [newEmail, setNewEmail] = useState("");
+  const [newPhone, setNewPhone] = useState("");
+  const [newProfile, setNewProfile] = useState("");
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
-  // const [permission, setPermission] = useState("default");
+  const [newYear, setNewYear] = useState("");
+  const [newBirth, setNewBirth] = useState("");
 
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -97,7 +106,6 @@ export const AddressPage = () => {
     clearUserData,
     updateMenuList,
     updateRoleNames,
-    updateUserInfo,
   } = useGlobalStore();
   const { checkForUpdates, initGetRegister } = useServiceWorkerStore();
   useEffect(() => {
@@ -136,14 +144,6 @@ export const AddressPage = () => {
     getAddresses();
   }, []);
 
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  const handleIconClick = () => {
-    // 아이콘 클릭시 숨겨진 input의 달력을 엽니다
-    if (inputRef.current) {
-      inputRef.current.showPicker();
-    }
-  };
   const copyToClipboard = async (text: string, type: string) => {
     try {
       await navigator.clipboard.writeText(text);
@@ -212,48 +212,148 @@ export const AddressPage = () => {
   };
 
   const handleEdit = () => {
-    setEditInfo({
-      email: userInfo?.email ?? "",
-      phone: userInfo?.phone ?? "",
-      birth: new Date(userInfo?.birth ?? ""),
-      sarang: userInfo?.sarang ?? "",
-      daechung: userInfo?.daechung ? "대학부" : "청년부",
-    });
-    setNewPassword("");
-    setOldPassword("");
     setIsEdit(true);
   };
 
-  const handleChange = (field: string, value: string | boolean | Date) => {
-    setEditInfo((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
-
-  // 폼 제출 핸들러
-  const handleSubmit = async () => {
-    const data = await updateRequestUserInfo({
-      ...editInfo,
-      pid: userInfo?.pid ?? "",
-      daechung: editInfo.daechung === "대학부",
-    });
-    updateUserInfo(data);
-    setIsEdit(false);
-  };
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: 48 }, (_, i) => currentYear - i - 17);
 
   const handleChangePass = async () => {
-    await passwordChange({
-      oldPassword,
-      newPassword,
-    });
-    handleLogout();
+    try {
+      await passwordChange({
+        oldPassword,
+        newPassword,
+      });
+      handleLogout();
+    } catch {
+      toast({
+        title: "비밀번호 변경 실패",
+        variant: "destructive",
+        duration: 2000,
+      });
+    }
+  };
+
+  const handleChangeEmail = async () => {
+    try {
+      await updateRequestUserInfo({
+        pid: userInfo!.pid,
+        email: newEmail,
+      });
+      handleLogout();
+    } catch {
+      toast({
+        title: "이메일 변경 실패",
+        variant: "destructive",
+        duration: 2000,
+      });
+    }
+  };
+
+  const handleChangePhone = async () => {
+    try {
+      await updateRequestUserInfo({
+        pid: userInfo!.pid,
+        phone: newPhone,
+      });
+      handleLogout();
+    } catch {
+      toast({
+        title: "전화번호 변경 실패",
+        variant: "destructive",
+        duration: 2000,
+      });
+    }
+  };
+
+  const handleChangeProfile = async () => {
+    try {
+      await updateRequestUserInfo({
+        pid: userInfo!.pid,
+        profile_image: newProfile,
+      });
+      handleLogout();
+    } catch {
+      toast({
+        title: "프로필 사진 변경 실패",
+        variant: "destructive",
+        duration: 2000,
+      });
+    }
+  };
+
+  const handleChangeBirth = async () => {
+    try {
+      await updateRequestUserInfo({
+        pid: userInfo!.pid,
+        birth: `${newYear}-${newBirth}`,
+      });
+      handleLogout();
+    } catch {
+      toast({
+        title: "또래 / 생일 변경 실패",
+        variant: "destructive",
+        duration: 2000,
+      });
+    }
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const compressedFile = await compressUntilSize(file, 0.09);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setNewProfile(event.target?.result as string);
+    };
+    reader.onerror = () => {
+      toast({
+        title: "프로필 사진 올리기 실패",
+        variant: "destructive",
+        duration: 2000,
+      });
+    };
+    reader.readAsDataURL(compressedFile as File);
+  };
+
+  const handleYearChange = (yearValue: string) => {
+    setNewYear(yearValue);
+  };
+
+  const handleBirth = ({
+    month,
+    day,
+  }: {
+    month: number | null;
+    day: number | null;
+  }) => {
+    if (month === null || day === null) {
+      setNewBirth("");
+      return;
+    }
+    const formattedMonth = month.toString().padStart(2, "0");
+    const formattedDay = day.toString().padStart(2, "0");
+
+    const monthDay = `${formattedMonth}-${formattedDay}`;
+    setNewBirth(monthDay);
   };
 
   const roleMenuUpdate = async () => {
     const data = await getNewRoleMenu(userInfo?.pid ?? "");
     updateMenuList(data.menuList);
     updateRoleNames(data.roleNames);
+  };
+
+  const changeAccordion = (data: string) => {
+    setNewEmail("");
+    setNewPhone("");
+    setNewProfile("");
+    setOldPassword("");
+    setNewPassword("");
+    setNewBirth("");
+    setNewYear("");
+    setAccordion(data);
   };
 
   if (error) {
@@ -275,122 +375,204 @@ export const AddressPage = () => {
   if (isEdit) {
     return (
       <div className="page-wrapper">
-        <div className="page-body px-2 space-y-2">
-          <Label htmlFor="email">이메일</Label>
-          <Input
-            id="email"
-            type="email"
-            value={editInfo.email}
-            onChange={(e) => handleChange("email", e.target.value)}
-          />
+        <div className="page-body space-y-2">
+          <Label className="text-xl font-bold">정보 변경</Label>
+          <Accordion
+            type="single"
+            collapsible
+            className="w-full"
+            value={accordion}
+            onValueChange={changeAccordion}
+          >
+            <AccordionItem value="item-1">
+              <AccordionTrigger>이메일 변경</AccordionTrigger>
+              <AccordionContent>
+                <div className="p-2">
+                  <Label className="block mb-2">기존 이메일</Label>
+                  <Input value={userInfo?.email ?? "정보 없음"} readOnly />
+                  <Label className="block mt-4 mb-2">새 이메일</Label>
+                  <Input
+                    value={newEmail}
+                    onChange={(e) => setNewEmail(e.target.value)}
+                  />
+                  <Button
+                    type="submit"
+                    className="w-full mt-6"
+                    onClick={handleChangeEmail}
+                    disabled={!strictEmailRegex.test(newEmail)}
+                  >
+                    이메일 수정하기
+                  </Button>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+            <AccordionItem value="item-2">
+              <AccordionTrigger>프로필 사진 변경</AccordionTrigger>
+              <AccordionContent>
+                <div className="p-2">
+                  <div className="flex justify-center items-center gap-8">
+                    <div>
+                      <Label className="block mb-2">기존 프로필 사진</Label>
+                      <Avatar className="w-36 h-36">
+                        <AvatarImage
+                          src={userInfo?.profile_image}
+                          alt="profile"
+                        />
+                        <AvatarFallback>이미지 없음</AvatarFallback>
+                      </Avatar>
+                    </div>
+                    <div
+                      onClick={() => {
+                        const input = document.getElementById("image-upload");
+                        if (input) {
+                          input.click();
+                        }
+                      }}
+                    >
+                      <Label className="block mb-2">새 프로필 사진</Label>
+                      <Avatar className="w-36 h-36">
+                        <AvatarImage src={newProfile} alt="profile" />
+                        <AvatarFallback>이미지 없음</AvatarFallback>
+                      </Avatar>
+                      <input
+                        id="image-upload"
+                        type="file"
+                        className="hidden"
+                        accept="image/*"
+                        onChange={handleImageUpload}
+                      />
+                    </div>
+                  </div>
+                  <Button
+                    type="submit"
+                    className="w-full mt-6"
+                    onClick={handleChangeProfile}
+                    disabled={!newProfile}
+                  >
+                    프로필 사진 수정하기
+                  </Button>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
 
-          <Label htmlFor="phone">전화번호</Label>
-          <Input
-            id="phone"
-            type="tel"
-            value={editInfo.phone}
-            onChange={(e) => handleChange("phone", e.target.value)}
-          />
+            <AccordionItem value="item-3">
+              <AccordionTrigger>전화번호 변경</AccordionTrigger>
+              <AccordionContent>
+                <div className="p-2">
+                  <Label className="block mb-2">기존 전화번호</Label>
+                  <Input value={userInfo?.phone ?? "정보 없음"} readOnly />
+                  <Label className="block mt-4 mb-2">새 전화번호</Label>
+                  <Input
+                    type="tel"
+                    value={newPhone}
+                    onChange={(e) => setNewPhone(e.target.value)}
+                  />
+                  <Button
+                    type="submit"
+                    className="w-full mt-6"
+                    onClick={handleChangePhone}
+                    disabled={newPhone.length <= 9}
+                  >
+                    전화번호 수정하기
+                  </Button>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+            <AccordionItem value="item-4">
+              <AccordionTrigger>또래 / 생일 변경</AccordionTrigger>
+              <AccordionContent>
+                <div className="p-2">
+                  <Label className="block mb-2">기존 정보</Label>
 
-          <Label htmlFor="birth">생년월일</Label>
-          <div className="flex items-center justify-between">
-            <div>{editInfo.birth.toLocaleDateString()}</div>
-            <div className="relative">
-              <Input
-                ref={inputRef}
-                id="birth"
-                type="date"
-                className="w-0 h-0 opacity-0 absolute"
-                onChange={(e) =>
-                  handleChange("birth", new Date(e.target.value))
-                }
-              />
-              <button
-                type="button"
-                onClick={handleIconClick}
-                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-              >
-                <Calendar className="w-5 h-5 text-gray-600" />
-              </button>
-            </div>
-          </div>
+                  <Input value={userInfo?.birth ?? "정보 없음"} readOnly />
+                  <Label className="block mt-4 mb-2">새 정보</Label>
+                  <div className="grid grid-cols-9 gap-3">
+                    <div className="col-span-4">
+                      <Label htmlFor="phone" className="block mb-2">
+                        또래
+                      </Label>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className="w-full"
+                            type="button"
+                          >
+                            {newYear ? newYear : "또래 선택"}
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="max-h-36 min-w-24 overflow-y-scroll">
+                          {years.map((year) => (
+                            <DropdownMenuItem
+                              key={year}
+                              onSelect={() => handleYearChange(year.toString())}
+                            >
+                              <div className="text-center w-full">{year}</div>
+                            </DropdownMenuItem>
+                          ))}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                    <div className="col-span-5">
+                      <Label htmlFor="phone" className="block mb-2">
+                        생일
+                      </Label>
+                      <MonthDayPicker onChange={handleBirth} />
+                    </div>
+                  </div>
+                  <Button
+                    type="submit"
+                    className="w-full mt-6"
+                    onClick={handleChangeBirth}
+                    disabled={!newYear || !newBirth}
+                  >
+                    또래 / 생일 수정하기
+                  </Button>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+            <AccordionItem value="item-5">
+              <AccordionTrigger>비밀번호 변경</AccordionTrigger>
+              <AccordionContent>
+                <div className="p-2">
+                  <Label className="block mb-2">기존 비밀번호</Label>
 
-          <div className="flex justify-between items-center gap-4">
-            <div className="w-1/2 space-x-4">
-              <label className="inline-flex items-center">
-                <input
-                  type="radio"
-                  name="daechung"
-                  value="대학부"
-                  checked={editInfo.daechung === "대학부"}
-                  onChange={(e) => handleChange("daechung", e.target.value)}
-                  className="mr-2"
-                />
-                <span>대학부</span>
-              </label>
-              <label className="inline-flex items-center">
-                <input
-                  type="radio"
-                  name="daechung"
-                  value="청년부"
-                  checked={editInfo.daechung === "청년부"}
-                  onChange={(e) => handleChange("daechung", e.target.value)}
-                  className="mr-2"
-                />
-                <span>청년부</span>
-              </label>
-            </div>
-            <div className="w-1/2">
-              <select
-                name="sarang"
-                value={editInfo.sarang}
-                onChange={(e) => handleChange("sarang", e.target.value)}
-                className="mt-1 block w-full h-11 rounded-md border border-gray-300 p-2"
-              >
-                <option value="">사랑방을 선택하세요</option>
-                {editInfo.daechung === "청년부"
-                  ? members.y.map((name) => (
-                      <option key={name} value={name}>
-                        {name} 사랑방
-                      </option>
-                    ))
-                  : members.c.map((name) => (
-                      <option key={name} value={name}>
-                        {name} 사랑방
-                      </option>
-                    ))}
-              </select>
-            </div>
-          </div>
+                  <Input
+                    type="password"
+                    value={oldPassword}
+                    onChange={(e) => setOldPassword(e.target.value)}
+                  />
+                  <Label className="block mt-4 mb-2">새 비밀번호</Label>
+                  <Input
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                  />
+                  <Button
+                    type="submit"
+                    className="w-full mt-6"
+                    onClick={handleChangePass}
+                    disabled={oldPassword.length < 6 || newPassword.length < 6}
+                  >
+                    비밀 번호 수정하기
+                  </Button>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
 
-          <Button type="submit" className="w-full" onClick={handleSubmit}>
-            정보 수정하기
-          </Button>
-
-          <div className="space-y-2 pt-4">
-            <Label className="block mb-2">비밀번호 변경</Label>
-            <Label>기존 비밀번호</Label>
-
-            <Input
-              type="password"
-              value={oldPassword}
-              onChange={(e) => setOldPassword(e.target.value)}
-            />
-            <Label>새 비밀번호</Label>
-            <Input
-              type="password"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-            />
-            <Button type="submit" className="w-full" onClick={handleChangePass}>
-              비밀 번호 수정하기
-            </Button>
-          </div>
+            <AccordionItem value="item-6">
+              <AccordionTrigger>기타</AccordionTrigger>
+              <AccordionContent>
+                <div>개인 정보 변경, 기타 문의 사항은</div>
+                <div>국장 혹은 운영자에게 이야기 부탁드립니다.</div>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
         </div>
 
         <Button
           variant="ghost"
-          className="w-full flex justify-start mt-4 items-center gap-2"
+          className="w-full flex justify-start mt-2 items-center gap-2"
           onClick={() => setIsEdit(false)}
         >
           <ChevronRight className="h-4 w-4 rotate-180" />내 정보로 돌아가기
@@ -403,8 +585,11 @@ export const AddressPage = () => {
     return (
       <div className="page-wrapper">
         <Card className="page-body">
-          <div className="flex justify-start items-center p-6 gap-6 relative">
-            <UserCircle className="w-12 h-12 text-primary" />
+          <div className="flex justify-start items-center px-4 pt-6 gap-6 relative">
+            <Avatar className="w-16 h-16">
+              <AvatarImage src={userInfo?.profile_image} alt="profile" />
+              <AvatarFallback>이미지 없음</AvatarFallback>
+            </Avatar>
             <div className="mt-1">
               <div className="flex gap-2">
                 {userInfo?.daechung ? (
@@ -420,9 +605,12 @@ export const AddressPage = () => {
             </div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="absolute top-6 right-5">
+                <Button
+                  variant="ghost"
+                  className="absolute px-2.5 top-4 right-2.5"
+                >
                   <Pencil className="w-5 h-5" />
-                </button>
+                </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-32 space-y-2">
                 <DropdownMenuItem
@@ -454,7 +642,7 @@ export const AddressPage = () => {
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
-          <CardContent>
+          <CardContent className=" p-5">
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-4">
@@ -481,7 +669,7 @@ export const AddressPage = () => {
                   <div className="font-medium">
                     {userInfo?.birth
                       ? new Date(userInfo.birth).toLocaleDateString()
-                      : ""}
+                      : "정보 없음"}
                   </div>
                 </div>
                 <div className="space-y-1">
@@ -505,7 +693,7 @@ export const AddressPage = () => {
                 <Label className="text-sm text-muted-foreground">
                   메뉴 권한
                 </Label>
-                <div className="grid grid-cols-2 gap-2 min-h-12 max-h-20 overflow-y-auto">
+                <div className="grid grid-cols-2 gap-2 min-h-16 max-h-28 overflow-y-auto">
                   {menuList?.map((menu) => (
                     <Badge key={menu.id} variant="outline">
                       {menu.name}
@@ -528,7 +716,7 @@ export const AddressPage = () => {
 
         <Button
           variant="ghost"
-          className="w-full flex justify-start mt-4 items-center gap-2"
+          className="w-full flex justify-start mt-2 items-center gap-2"
           onClick={() => setMyPage(false)}
         >
           <ChevronRight className="h-4 w-4 rotate-180" />
@@ -564,12 +752,18 @@ export const AddressPage = () => {
                   {contact.user.map((user) => (
                     <div
                       key={user.phone}
-                      className="hover:bg-accent/50 transition-colors p-3 rounded-lg"
+                      className="hover:bg-accent/50 transition-colors py-3 px-1.5 rounded-lg"
                     >
                       <div className="flex justify-start items-center gap-3">
-                        <div className="bg-primary/10 p-2 rounded-full">
-                          <UserCircle className="w-8 h-8 text-primary" />
-                        </div>
+                        <Avatar className="w-16 h-16">
+                          <AvatarImage
+                            src={user?.profile_image}
+                            alt="profile"
+                          />
+                          <AvatarFallback>
+                            <Image />
+                          </AvatarFallback>
+                        </Avatar>
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
                             {user.daechung ? (

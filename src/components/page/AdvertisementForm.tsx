@@ -207,7 +207,7 @@ export const AdvertisementForm: React.FC<AdvertisementsFormProps> = ({
         <img
           src={content.preview}
           alt="Preview"
-          className="w-full h-96 object-contain"
+          className="w-full h-72 object-contain"
         />
       );
     } else if (type.includes("video")) {

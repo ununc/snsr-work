@@ -332,7 +332,7 @@ export const CollegeLeaderReportPage = ({
           onTouchMove={onTouchMove}
           onTouchEnd={onTouchEnd}
         >
-          <div className="h-9 flex justify-between items-center mb-4">
+          <div className="h-4 flex justify-between items-center mb-4">
             <Label className="text-xl font-bold">
               {formattedDate} {leaderName} 사랑방
             </Label>
@@ -357,14 +357,14 @@ export const CollegeLeaderReportPage = ({
             />
           </div>
           {editable ? (
-            <div className="flex w-full items-center justify-end mt-4 gap-2">
+            <div className="flex w-full items-center justify-end mt-2 gap-2">
               <Button variant="destructive" onClick={handleCancel}>
                 취소
               </Button>
               <Button onClick={handleSave}>저장</Button>
             </div>
           ) : (
-            <div className="flex w-full items-center justify-between mt-4">
+            <div className="flex w-full items-center justify-between mt-2">
               <Button
                 variant="ghost"
                 className=" flex justify-start items-center gap-2"
@@ -395,7 +395,7 @@ export const CollegeLeaderReportPage = ({
         </div>
         <Button
           variant="ghost"
-          className="w-full flex justify-start mt-4 items-center gap-2"
+          className="w-full flex justify-start mt-2 items-center gap-2"
           onClick={backToReport}
         >
           <ChevronRight className="h-4 w-4 rotate-180" />
@@ -407,7 +407,7 @@ export const CollegeLeaderReportPage = ({
   const hasUserWritten = lists.some((item) => item.leaderPid === currentUserId);
   return (
     <div className="page-wrapper">
-      <div className="h-9 flex items-center mb-4">
+      <div className="h-4 flex items-center mb-4">
         <Label className="text-xl font-bold">
           {daechung ? "대학" : "청년"}부 리더 보고
         </Label>
@@ -427,7 +427,7 @@ export const CollegeLeaderReportPage = ({
           ))}
         </div>
       </div>
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center mt-2">
         <BogoSelect
           selectedDate={selectedDate}
           setSelectedDate={setSelectedDate}

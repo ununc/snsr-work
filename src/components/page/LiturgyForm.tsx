@@ -281,7 +281,7 @@ export const LiturgyForm: React.FC<LiturgyFormProps> = ({
               <img
                 src={img.preview}
                 alt="Preview"
-                className="w-full h-96 object-contain"
+                className="w-full h-72 object-contain"
               />
               {!readonly && (
                 <Button

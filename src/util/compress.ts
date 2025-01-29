@@ -1,15 +1,14 @@
 import imageCompression from "browser-image-compression";
 
 export async function compressUntilSize(file: File, maxSizeMB: number) {
-  let quality = 0.8;
+  let quality = 1;
   let compressed;
-
-  while (quality > 0.1) {
+  while (quality > 0.4) {
     compressed = await imageCompression(file, {
-      maxSizeMB: maxSizeMB,
-      maxWidthOrHeight: 1024,
+      maxSizeMB,
       initialQuality: quality,
     });
+    console.log(compressed.size);
 
     if (compressed.size / 1024 / 1024 <= maxSizeMB) {
       break;
