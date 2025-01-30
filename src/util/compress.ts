@@ -8,7 +8,6 @@ export async function compressUntilSize(file: File, maxSizeMB: number) {
       maxSizeMB,
       initialQuality: quality,
     });
-    console.log(compressed.size);
 
     if (compressed.size / 1024 / 1024 <= maxSizeMB) {
       break;

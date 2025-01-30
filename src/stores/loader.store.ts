@@ -21,5 +21,5 @@ export const useLoaderStore = create<LoaderState>((set) => ({
         loadingCount: state.loadingCount - 1,
         isLoading: state.loadingCount - 1 > 0,
       }));
-    }, 250),
+    }, 180),
 }));
